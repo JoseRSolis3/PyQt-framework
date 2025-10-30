@@ -259,3 +259,31 @@ class widgetFactory:
                 log.info(f"{verifier_name(v)}: Widget does not have attribute 'setWindowTitle'.")
                 return None
 
+    def child_verifier(self,layout = None, child = None):
+        v = "child"
+        log.info(f"{verifier_name(v)}: Entered value is ({child}) and its instance is ({class_name(child)})")
+
+        if child is None:
+            log.info(f"{verifier_name(v)}: Child is None. Returning None")
+            return None
+        
+        if layout is None:
+            log.warning(f"{verifier_name(v)}: Layout is None. Can't add a child if layout is None. Please try again.")
+            return None
+        
+        layout_attrs = ["addRow", "addWidget", "addLayout", "addItem"]
+
+        for attribute in layout_attrs:
+            if hasattr(layout, attribute):
+                adder = lambda l, a = attribute: getattr(l, a)(child)
+                adder(layout)
+                log.info(f"{verifier_name(v)}: Using {attribute} to add child.") 
+                break   
+
+    def widget_without_text_builder(self, widget = None, obj_name = None, ):
+        # TODO: Set up the builder
+        pass
+
+    def widget_with_text_builder(self):
+        # TODO: Set up the builder
+        pass       

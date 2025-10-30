@@ -324,14 +324,36 @@ class widgetFactory:
         if isinstance(widget, QMainWindow):
             if hasattr(widget, "show"):
                 log.info(f"{builder_name(b)}: Widget has attr: 'show'.")
+                widget.show()
                 return widget
             else:
                 log.warning(f"{builder_name}: Main Window does not have attr 'show'. Please check log for corrective ation.")
         else:
             return widget
 
-
     @divider_wrapper("=", 20)
-    def widget_with_text_builder(self):
-        # TODO: Set up the builder
-        pass       
+    def widget_with_text_builder(self, widget = None, text = None,layout = None, geometry = None, child = None, obj_name = None):
+        b = "widget with text" 
+        log.info(f"{builder_name(b)}: Initiating builder.")
+
+        self.widget_verifier(widget)
+        #Should return the definition not the key
+
+        self.text_verifier(widget, text)
+        #Should return a striped text.
+
+        self.geometry_verifier(widget, geometry)
+        #Should return either Geometry or Resize
+
+        self.layout_verifier(layout)
+        #Should retur the definition not the key.
+
+        self.child_verifier(layout, child)
+        #Should add the child accordingly.
+
+        self.object_name_verifier(obj_name)
+        #Should add the object name
+
+        return widget
+
+

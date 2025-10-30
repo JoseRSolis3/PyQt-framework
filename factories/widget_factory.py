@@ -13,11 +13,25 @@ import sys
 import os
 
 verifier_name = lambda v: f"|{v.upper()} VERIFIER|"
+builder_name = lambda b: f"|{b.upper()} BUILDER|"
+
 class_name = lambda w: w.__class__.__name__
 reminder = "|**REMINDER**|"
 default_text = "Enter Text Here"
 lower_strip = lambda t: t.strip().lower() if isinstance(t, str) else t
 strip = lambda t: t.strip() if isinstance(t, str) else t
+
+def divider_wrapper(char="=", length=20):
+    def decorator(func):
+        def wrapper(*args, **kwargs):
+            line = char * length
+            print(line)
+            result = func(*args, **kwargs)
+            print(line)
+            return result
+        return wrapper
+    return decorator
+
 
 class widgetFactory:
     def __init__(self):
@@ -280,10 +294,44 @@ class widgetFactory:
                 log.info(f"{verifier_name(v)}: Using {attribute} to add child.") 
                 break   
 
-    def widget_without_text_builder(self, widget = None, obj_name = None, ):
-        # TODO: Set up the builder
-        pass
+    @divider_wrapper("=", 20)
+    def widget_without_text_builder(self, widget = None,layout = None, alignment = None, title = None, geometry = None, child = None, obj_name = None, ):
+        b = "widget without text"
+        log.info(f"{builder_name(b)}: Initiating builder.")
 
+        log.info(f"{builder_name(b)}: Botting verifiers")
+        self.widget_verifier(widget)
+        #should return a definition not a key.
+
+        self.layout_verifier(layout, child)
+        #should add layout (if any) to widget
+
+        self.alignement_verifier(widget, alignment)
+        #should add alignment (if any)
+
+        self.title_verifier(widget, title)
+        #should return a stripped title.
+
+        self.geometry_verifier(widget, geometry)
+        #should apply geometry or resize (if any).
+
+        self.child_verifier(layout, child)
+        #should apply child (if any).
+
+        self.object_name_verifier(widget, obj_name)
+        #should apply object name (recommended, if any).
+
+        if isinstance(widget, QMainWindow):
+            if hasattr(widget, "show"):
+                log.info(f"{builder_name(b)}: Widget has attr: 'show'.")
+                return widget
+            else:
+                log.warning(f"{builder_name}: Main Window does not have attr 'show'. Please check log for corrective ation.")
+        else:
+            return widget
+
+
+    @divider_wrapper("=", 20)
     def widget_with_text_builder(self):
         # TODO: Set up the builder
         pass       

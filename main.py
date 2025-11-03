@@ -29,55 +29,36 @@ def safestart(func):
 class App():
     def __init__(self):
         self.app = QApplication(sys.argv)
+        self.children = []
         self.mw = self.main_window()
-        if hasattr(self.mw, "show"):
-            log.debug(f"|INIT VERIFICATION|: self.mw is {class_name(self.mw)} and does have 'show' attribute.")
-        else:
-            log.error(f"|INIT VERIFICATION|: self.mw is {class_name(self.mw)} and does not have 'show' sttribute")
-        self.mw.show()
         sys.exit(self.app.exec())
 
     @safestart
     def main_window(self):
-        self.central_widget = widgetFactory().widget_without_text_builder("widget","vertical", None, None, None, "Central Widget", None) 
-        log.debug(f"Entered Central Widget: {class_name(self.central_widget)}")    
-        self.mw = widgetFactory().widget_without_text_builder("main window", None, None, (100,100,500,300), "App", self.central_widget, "Main Window")
-        log.debug(f"|MAIN WINDOW METHOD VERIFICATION|: Entered Main Window: {class_name(self.mw)}")
-        return self.mw
+        central_widget = widgetFactory().widget_without_text_builder("widget", "vertical", "vertical", None, None, self.children, "central widget")
+        main_window = widgetFactory().widget_without_text_builder("main window", None, None, "App", (100,100,500,300), central_widget, "main window")
+        return main_window
     
-    @safestart
-    def children(self):
-        self.child = [LoginPage().page_constrictor()]
-        return self.child
 
-class LoginPage():
+class loginPage():
     def __init__(self):
-        self.login_page_children = []
-        log.info(f"Children: {self.login_page_children}")
-        self.top_menu()
-        self.page_constrictor()
-    
-    def page_constrictor(self):
-        log.info(f"Encapsulating every widget into one page")
-        self.page = widgetFactory().widget_without_text_builder("widget", "vertical", "center", None, None, self.login_page_children, "Login Page Constrictor")
-        return self.page
-    
+        self.login_children = []
+        self.titleRow()
+        self.pageWidget()
+
     @safestart
-    def top_menu(self):
-        self.menu_items = []
+    def titleRow(self):
+        titleWidget = widgetFactory().widget_with_text_builder("label", "Title", "center", None, None, "title row")
+        self.login_children.append(titleWidget)
+        return titleWidget   
+     
+    @safestart
+    def pageWidget(self):
+        page = widgetFactory().widget_without_text_builder("widget", "vertical", None, None, None, self.login_children, "login page")
+        log.debug(f"{class_name(page)}")
+        return page
+    
 
-        self.modes = ["Light", "Dark"]
-        self.modes_menu = widgetFactory().widget_with_text_builder("drop down", None, "right", None,"mode menu", self.modes)
-        self.menu_items.append(self.modes_menu)
-
-        self.languages = ["English", "Spanish"]
-        self.language_menu = widgetFactory().widget_with_text_builder("drop down", None, "right", None, None, self.languages, "language menu")
-        self.menu_items.append(self.language_menu)
-
-        self.top_menu_constrictor = widgetFactory().widget_without_text_builder("widget", "horizontal", "right", None, None, self.menu_items, "Top Menu Constrictor")
-
-        log.info(f"Menu Items = {self.menu_items} | Constrictor: {self.top_menu_constrictor}")
-        self.login_page_children.append(self.top_menu_constrictor)
 
 if __name__ == "__main__":
     app = App()

@@ -45,7 +45,7 @@ def widget_verifier(widget = None):
     advanced_log("info", f"Cleaned widget type is {class_name(cleaned_widget)}.")
 
     #varifies if the widget is in the widget dictionary
-    if isinstance(cleaned_widget, tuple(widgets_list.values())):
+    if cleaned_widget in widgets_list:
         instance = cleaned_widget
         widget_name = class_name(instance)
 
@@ -80,3 +80,21 @@ def widget_verifier(widget = None):
 
     advanced_log("info", f"Widget verification completed for: {widget_name}")
     return instance
+
+def layout_verifier(layout = None):
+    # User Entry -> Cleaned Entry -> Entry verifier -> data converter -> proper instance
+    advanced_log("info", f"Layout entry is {layout}. Starting layout verification.")
+
+    #Check if user entered a string
+    cleaned_layout = cleaner(layout)
+    advanced_log("info", f"Layout is {cleaned_layout} after cleaning")
+
+    #Verifies if the layout exists in the list
+    if cleaned_layout in layouts_list:
+        layout_instance = layouts_list[cleaned_layout]
+        layout_name = class_name(layout_instance)
+
+    # TODO filter out MainWindow to avoid adding layout
+    # TODO allow verified widgets to add layouts
+    # TODO verify widget compatability 
+    # TODO return instance

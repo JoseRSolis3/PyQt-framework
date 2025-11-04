@@ -12,8 +12,7 @@ import inspect
 import sys
 import os
 
-advanced_log("info", "TEST LOG FROM ")
-
+advanced_log("info", "TEST LOG")
 
 class_name = lambda w: w.__class__.__name__
 reminder = "|**REMINDER**|:"

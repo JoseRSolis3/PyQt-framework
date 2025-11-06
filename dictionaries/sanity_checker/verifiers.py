@@ -6,6 +6,7 @@ from PyQt6.QtWidgets import (
 from PyQt6.QtCore import Qt
 from variable_cleaner import cleaner
 from log_util import advanced_log
+from functools import reduce
 import inspect
 import sys 
 import os
@@ -13,6 +14,12 @@ import os
 advanced_log("info", "Cleaning done, continuing with verification.")
 class_name = lambda var: var.__class__.__name__
 reminder = "|**REMINDER**|"
+
+# (var, attr, value) -> executes var.attr(value)
+command = lambda var, a, v: getattr(var, a)(v)
+
+# (var, nested_attr_path, value) -> executes var.attr1().attr2(...)(value)
+command_nested = lambda var, path, v: reduce(getattr,path.split('.'), var)(v)
 
 widgets_list = {
     "application":QApplication,
@@ -31,70 +38,109 @@ layouts_list = {
     "form":QFormLayout}
 
 widget_attributes = {
-    "QPushButton": ["text", "enabled", "visible"],
-    "QLabel": ["text", "alignment", "visible"],
-    "QLineEdit": ["text", "placeholderText", "readOnly"],
-    "QComboBox": ["items", "currentIndex", "editable"]
+    QMainWindow : ["setCentralWidget", "show"],
+    QWidget : ["setLayout"],
+    QLabel : [("setText", str)],
+    QComboBox : [("addItem", str), ("addItems", list)],
+    QLineEdit : [("setPlaceholderText", str)]
 }
 
-def widget_verifier(widget = None):
-    advanced_log("info", f"Widget entry is {widget}. Starting widget verification.")
+class verifier():
+    def __init__(self, widget, layout):
+        self.instantiated_variables = []
+        self.widget_verifier(widget)
+        self.layout_verifier(layout)
 
-    #cleans the key variable
-    cleaned_widget = cleaner(widget)
-    advanced_log("info", f"Cleaned widget type is {class_name(cleaned_widget)}.")
+    def widget_verifier(self, widget):
+        advanced_log("info","Initiating widget verification.")
+        # Run the cleaner
+        cleaned_widget = cleaner(widget)
 
-    #varifies if the widget is in the widget dictionary
-    if cleaned_widget in widgets_list:
-        instance = cleaned_widget
-        widget_name = class_name(instance)
+        # Check if the widget exists
+        if cleaned_widget in widgets_list:
+            advanced_log("info","Entered text matched token.")
+            # Convert the cleaned_widget text to its instance
+            cls = widgets_list[cleaned_widget]
+            # Check if the class matches the widget
+            if cls is QApplication:
+                # Append (sys.argv) to QApplication
+                instance = cls(sys.argv)
+                advanced_log("info","QApplication detected. Auto appended sys.argv as the argument")
+                self.instantiated_variables.append(instance)
+            else:
+                instance = cls()
+                self.instantiated_variables.append(instance)
+        else:
+            advanced_log("warning","Entered text did not match a token. Please try again.")
+            return None
 
-    #if user passes a string key -> convert it to class
-    elif isinstance(cleaned_widget, str): 
-        #lookup the widget class from the dictionary
-        widget_class = widgets_list.get(cleaned_widget)
-
-        if widget_class is None:
-            advanced_log("info", f"Widget class not found for key '{cleaned_widget}'")
+    def layout_verifier(self, layout):
+        advanced_log("info", "Initiating layout verifier.")
+        cleaned_layout = cleaner(layout)
+        if cleaned_layout in layouts_list:
+            cls = layouts_list[cleaned_layout]
+            instance = cls()
+            self.instantiated_variables.append(instance)
+        else:
+            advanced_log("warning", "Layout does not exist in list. Please try again.")
             return None
         
-        advanced_log("info", f"Widget class found for key '{cleaned_widget}'")
-        #Create an instance of the widget | key -> class -> instance | str -> class -> widget
-        instance = widget_class()
-        widget_name = class_name(instance)
-    else:
-        advanced_log("warning", f"Invalid widget type: {class_name(cleaned_widget)}. Expected str or Widget instance")
-        return None
-    
-    #Attribute verification
-    if widget_name in widget_attributes:
-        advanced_log("info", f"Verifying attributes for widget: {widget_name}")
-
-        for attr in widget_attributes[widget_name]:
-            if not hasattr(instance, attr):
-                advanced_log("warning", f"Widget '{widget_name}' is missing. Expected attribute: '{attr}'.")
+    # TODO Size Verifier
+    def size_verifier(self, size):
+        advanced_log("info", "Initiating size verifier.")
+        # TODO cleaner
+        cleaned_size = cleaner(size)
+        # Check if size is a list
+        if isinstance(cleaned_size, (list, tuple)):
+            # Create a list with the verified numbers
+            verified_size = []
+            # Iterate through the list/tuple
+            for n in cleaned_size:
+                if isinstance(n, (int, float)):
+                    # Add the verified number into the list
+                    verified_size.append(n)
+            # Check the length of the list
+            if len(verified_size) == 2:
+                advanced_log("info", "Resize detected")
+                # Find widget in the the instantiated variables list
+                for var in self.instantiated_variables:
+                    # Check each item to see if it has the resize attribute
+                    if hasattr(var, "resize"):
+                        var.resize(*verified_size)
+                    else:
+                        advanced_log("critical", "Widget does not possess the 'resize' attribute.")
+            elif len(verified_size) == 4:
+                advanced_log("info", "Geometry detected.")
+                for var in self.instantiated_variables:
+                    if hasattr(var, "setGeometry"):
+                        var.setGeometry(*verified_size)
+                    else:
+                        advanced_log("critical", "Widget does not possess the 'setGeometry' attribute.")
             else:
-                advanced_log("info", f"Widget '{widget_name}' has expected attribute: '{attr}'.")
-    else:
-        advanced_log("info", f"No attribute verication list for widget: {widget_name}")
+                advanced_log("warning", "List/tuple length is invalid. Please try again.")
+        else:
+            advanced_log("warning", "Entered data type is not list/tuple. Please try again")
 
-    advanced_log("info", f"Widget verification completed for: {widget_name}")
-    return instance
+    # TODO Alignment Verifier
+        # TODO cleaner
+        # TODO list check
+            # TODO instantiate
+        # TODO else 
 
-def layout_verifier(layout = None):
-    # User Entry -> Cleaned Entry -> Entry verifier -> data converter -> proper instance
-    advanced_log("info", f"Layout entry is {layout}. Starting layout verification.")
+    # TODO Child Verifier
+        # TODO cleaner
+        # TODO list check
+            # TODO instantiate
+        # TODO else 
 
-    #Check if user entered a string
-    cleaned_layout = cleaner(layout)
-    advanced_log("info", f"Layout is {cleaned_layout} after cleaning")
+    # TODO Style Verifier
+        # TODO cleaner
+        # TODO list check
+            # TODO instantiate
+        # TODO else 
 
-    #Verifies if the layout exists in the list
-    if cleaned_layout in layouts_list:
-        layout_instance = layouts_list[cleaned_layout]
-        layout_name = class_name(layout_instance)
-
-    # TODO filter out MainWindow to avoid adding layout
-    # TODO allow verified widgets to add layouts
-    # TODO verify widget compatability 
-    # TODO return instance
+    # TODO Object Name Verifier
+        # TODO cleaner
+        # TODO list check
+            # TODO instantiate
+        # TODO else 

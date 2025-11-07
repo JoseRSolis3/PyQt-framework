@@ -21,6 +21,8 @@ command = lambda var, a, v: getattr(var, a)(v)
 # (var, nested_attr_path, value) -> executes var.attr1().attr2(...)(value)
 command_nested = lambda var, path, v: reduce(getattr,path.split('.'), var)(v)
 
+alignment_flag = "Qt.alignmentFlag."
+
 widgets_list = {
     "application":QApplication,
     "main window":QMainWindow,
@@ -45,11 +47,21 @@ widget_attributes = {
     QLineEdit : [("setPlaceholderText", str)]
 }
 
+alignment_lists = {
+    "center" : f"{alignment_flag}Center",
+    "right" : f"{alignment_flag}Right",
+    "left" : f"{alignment_flag}Left",
+    "top" : f"{alignment_flag}Top"
+}
+
 class verifier():
-    def __init__(self, widget, layout):
+    def __init__(self, widget, layout, size, alignment):
         self.instantiated_variables = []
         self.widget_verifier(widget)
         self.layout_verifier(layout)
+        self.size_verifier(size)
+        self.alignment_verifier(alignment)
+
 
     def widget_verifier(self, widget):
         advanced_log("info","Initiating widget verification.")
@@ -85,7 +97,6 @@ class verifier():
             advanced_log("warning", "Layout does not exist in list. Please try again.")
             return None
         
-    # TODO Size Verifier
     def size_verifier(self, size):
         advanced_log("info", "Initiating size verifier.")
         # TODO cleaner
@@ -99,6 +110,10 @@ class verifier():
                 if isinstance(n, (int, float)):
                     # Add the verified number into the list
                     verified_size.append(n)
+                    advanced_log("info",f"{n} is verified as {class_name(n)}")
+                else:
+                    advanced_log("warning",f"{n} and is {class_name(n)}. {n} has to be an int or a float.")
+                    break
             # Check the length of the list
             if len(verified_size) == 2:
                 advanced_log("info", "Resize detected")
@@ -121,17 +136,36 @@ class verifier():
         else:
             advanced_log("warning", "Entered data type is not list/tuple. Please try again")
 
-    # TODO Alignment Verifier
-        # TODO cleaner
-        # TODO list check
-            # TODO instantiate
-        # TODO else 
+    def alignment_verifier(self, alignment):
+        advanced_log("info", "Initiating alignment verifier.")
+        cleaned_alignment = cleaner(alignment)
+        if cleaned_alignment in alignment_lists:
+            for var in self.instantiated_variables:
+                if hasattr(var, "setAlignment"):
+                    command(var, "setAlignment", cleaned_alignment)
+                else:
+                    advanced_log("warning", "Widget does not have attribute 'setAlignment'.")
+        else:
+            advanced_log("warning", "Cleaned alignment doesnt exist in the list. Please try again.")
 
-    # TODO Child Verifier
+    def child_verifier(self, child):
+        advanced_log("info", "Initiating child verifier.")
         # TODO cleaner
-        # TODO list check
-            # TODO instantiate
-        # TODO else 
+        cleaned_child = cleaner(child)
+
+        if isinstance(cleaned_child, (QApplication,QMainWindow)):
+            advanced_log("warning",f"{cleaned_child} is {class_name(cleaned_child)} and can not be child.")
+            return None
+        # TODO instantiate
+        for var in self.instantiated_variables:
+            if hasattr(var, "addItem"):
+                command(var, "addItem", cleaned_child)
+                break
+            elif hasattr(var, "addRow",):
+                command(var, "addRow", cleaned_child)
+                break
+        else:
+            advanced_log("warning","Widget could not accept child. Please try again.")
 
     # TODO Style Verifier
         # TODO cleaner

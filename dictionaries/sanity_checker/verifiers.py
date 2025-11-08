@@ -11,9 +11,9 @@ import inspect
 import sys 
 import os
 
-advanced_log("info", "Cleaning done, continuing with verification.")
 class_name = lambda var: var.__class__.__name__
 reminder = "|**REMINDER**|"
+default_text = "ENTER TEXT HERE"
 
 # (var, attr, value) -> executes var.attr(value)
 command = lambda var, a, v: getattr(var, a)(v)
@@ -22,6 +22,7 @@ command = lambda var, a, v: getattr(var, a)(v)
 command_nested = lambda var, path, v: reduce(getattr,path.split('.'), var)(v)
 
 alignment_flag = "Qt.alignmentFlag."
+set_wt = "setWindowTitle"
 
 widgets_list = {
     "application":QApplication,
@@ -157,24 +158,75 @@ class verifier():
             advanced_log("warning",f"{cleaned_child} is {class_name(cleaned_child)} and can not be child.")
             return None
         # TODO instantiate
+        if isinstance(cleaned_child, (list, tuple)):
+            for c in cleaned_child:
+                for var in self.instantiated_variables:
+                    if hasattr(var, "addItem"):
+                        command(var, "addItem", c)
+                        break
+                    elif hasattr(var, "addRow",):
+                        command(var, "addRow", c)
+                        break
+                else:
+                    advanced_log("warning","Widget could not accept child. Please try again.")
+        else:
+            for var in self.instantiated_variables:
+                if hasattr(var, "addItem"):
+                    command(var, "addItem", cleaned_child)
+                    break
+                elif hasattr(var, "addRow",):
+                    command(var, "addRow", cleaned_child)
+                    break
+            else:
+                advanced_log("warning","Widget could not accept child. Please try again.")
+
+    def text_verifier(self, text):
+        advanced_log("info","Initiating text verifier.")
+        cleaned_text = cleaner(text)
+
         for var in self.instantiated_variables:
-            if hasattr(var, "addItem"):
-                command(var, "addItem", cleaned_child)
-                break
-            elif hasattr(var, "addRow",):
-                command(var, "addRow", cleaned_child)
+            if hasattr(var, "addText"):
+                advanced_log("info",f"{var} has 'addText' attribute. Adding text: '{cleaned_text}'")
+                command(var, "addText", cleaned_text)
                 break
         else:
-            advanced_log("warning","Widget could not accept child. Please try again.")
+            advanced_log("warning",f"No matching variable with attribute 'addText'. Please try again.")
 
-    # TODO Style Verifier
+    def title_verifier(self, title):
+        advanced_log("info","Initiating title veriier.")
+        cleaned_title = cleaner(title)
+
+        if not isinstance(cleaned_title, str):
+            advanced_log("warning",f"Invalid data type: {class_name(cleaned_title)}. Data type must be a string")
+            for var in self.instantiated_variables:
+                if hasattr(var, set_wt):
+                    command(var, set_wt, default_text)
+                    break
+            else:
+                advanced_log("critical","Widget not found. Please try again.")
+        else:
+            for var in self.instantiated_variables:
+                if hasattr(var, set_wt):
+                    command(var, set_wt, cleaned_title)
+                    break
+            else:
+                advanced_log("critical","Widget not found. Please try again.")
+
+    # TODO Style Verifier - WIP
+    def style_verifier(self,style):
         # TODO cleaner
         # TODO list check
             # TODO instantiate
         # TODO else 
+        pass
 
-    # TODO Object Name Verifier
-        # TODO cleaner
-        # TODO list check
-            # TODO instantiate
-        # TODO else 
+    def object_name_verifier(self, obj_name):
+        advanced_log("info","Initiating object name verifier.")
+        cleaned_obj_name = cleaner(obj_name)       
+        for var in self.instantiated_variables:
+            if hasattr(var, "setObjectName"):
+                advanced_log("info",f"{var} has attribute 'setObjectName'. Setting up {cleaned_obj_name}.")
+                command(var, "setObjectName", cleaned_obj_name)
+                break
+        else:
+            advanced_log("warning",f"Could not find a variable with the attribute 'setObjectName'. Please try again.")

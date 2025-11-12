@@ -15,7 +15,13 @@ widgets = [
     QLabel, QLineEdit, QComboBox
 ]
 
-cleaner = lambda var: var.strip().lower()
+layouts = {
+    "vertical" : QVBoxLayout,
+    "horizontal" : QHBoxLayout,
+    "form" : QFormLayout
+}
+
+cleaner = lambda var: var.strip()
 class_name = lambda var: var.__class__.__name__
 layout_setter = lambda w, l: w.setLayout(l)
 
@@ -42,7 +48,8 @@ def application(ui_type, title):
     else:
         advanced_log("warning","ui_type needs to be a widget excluding (Main Window and App).")
 
-    mw.setGeometry(100,100,500,300)
+    mw.setGeometry(100,100,400,200)
+    advanced_log("info",f"Default App Geometry: (100, 100, 400, 200)")
 
     advanced_log("info",f"Seting Layout: {class_name(cw_layout)} to {class_name(cw)}.")
     cw.setLayout(cw_layout)
@@ -132,9 +139,10 @@ def page(size, child, page_name):
     if isinstance(child, (list, tuple)):
         for c in child:
             if isinstance(c, tuple(widgets)):
+                advanced_log("info",f"Adding {class_name(c)} to {class_name(layout)}")
                 layout.addWidget(c)
             else:
-                advanced_log("warning",f"Invalid widget. Child not added.")
+                advanced_log("warning",f"Invalid widget: {class_name(c)}. Child not added.")
     elif isinstance(child, tuple(widgets)):
         layout.addWidget(child)
     else:
@@ -161,6 +169,7 @@ def drop_down(child, logic):
                 instance.addItem(default_text)
             for c in child:
                 if isinstance(c, str):
+                    advanced_log("info",f"Adding {c} to {class_name(instance)}")
                     instance.addItem(c)
                 else:
                     advanced_log("warning",f"Invalid Data type: {class_name(c)}. Adding 1 default item to drop down menu.")
@@ -169,3 +178,33 @@ def drop_down(child, logic):
             advanced_log("warning","Expecting a list/tuple. Adding 1 default item to drop down menu.")
             instance.addItem(default_text)
     return instance
+
+def widget_shell(layout, child):
+    shell = QWidget()
+    default_layout = QVBoxLayout
+    
+
+    if layout is None:
+        advanced_log("warning",f"QWidget needs a layout. Setting default. Please try again.")
+        shell.setLayout(default_layout())  
+    if isinstance(layout, str):
+        layout.strip().lower()
+        advanced_log("info",f"Raw layout input: {class_name(layout)}.")
+        if layout in layouts:
+            verified_layout = layouts[layout]()
+            advanced_log("info",f"Layout detected: {class_name(verified_layout)}(). Adding it to {class_name(shell)}")
+            shell.setLayout(verified_layout) 
+            if child is None:
+                advanced_log("warning",f"Child is {class_name(child)}. Widget Shell requires a child.")
+            elif isinstance(child, (list, tuple)):
+                for c in child:
+                    if isinstance(c, tuple(widgets)):
+                        advanced_log("info",f"Widget detected: {class_name(c)}. Adding it to layout")
+                        verified_layout.addWidget(c)        
+            else:
+                advanced_log("warning",f"Invalid data type: {class_name(child)}. Please try again.")
+    else:
+        advanced_log("warning",f"Invalid input, please try again.")
+    return shell
+
+    

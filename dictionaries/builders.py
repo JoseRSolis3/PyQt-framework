@@ -222,6 +222,19 @@ def label(text):
         instance.setText(default_text)
     return instance
 
+def input(place_holder):
+    instance = QLineEdit()
+    
+    if place_holder is None or place_holder == "":
+        advanced_log("info",f"Placeholder is None or empty. Displaying empty input.")
+    elif isinstance(place_holder, str):
+        advanced_log("info",f"Placeholder detected. Applying to input.")
+        place_holder = place_holder.strip()
+        instance.setPlaceholderText(place_holder)
+    else:
+        advanced_log("warning",f"Placeholder is the wrong data type. Please try again.")
+    return instance
+
 def button(text, logic):
     default_text = "Enter Text Here"
     instance = QPushButton()

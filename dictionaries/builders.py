@@ -207,4 +207,35 @@ def widget_shell(layout, child):
         advanced_log("warning",f"Invalid input, please try again.")
     return shell
 
+def label(text):
+    instance = QLabel()
+    default_text = "Enter Text Here"
+
+    if text is None or text == "":
+        advanced_log("info","Text is None or empty. Setting default text.")
+        instance.setText(default_text)
+    elif isinstance(text, str):
+        text = text.strip()
+        instance.setText(text)
+    else:
+        advanced_log("warning",f"Invalid data type: {class_name(text)}. Setting default text")
+        instance.setText(default_text)
+    return instance
+
+def button(text, logic):
+    default_text = "Enter Text Here"
+    instance = QPushButton()
     
+    if text is None:
+        advanced_log("info",f"Text is Empty. Returning {default_text}")
+        instance.setText(default_text)
+    else:
+        advanced_log("info",f"Text detected! Adding it to {instance}().")
+        instance.setText(text if isinstance(text, str) else default_text)
+    
+    if logic is None:
+        advanced_log("info",f"Logic is None. Skipping.")
+    elif callable(logic):
+        advanced_log("info",f"Logic detected! Applying logic to {instance}()")
+        instance.clicked.connect(logic)
+    return instance

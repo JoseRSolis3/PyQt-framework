@@ -1,5 +1,7 @@
 import sqlite3
-from log_util import log
+from log_util import advanced_log
+from dictionaries.builders import class_name
+
 
 # TODO: Column Name Setter
 # TODO: Validate column syntax (ensure each entry contains a name and type)
@@ -20,32 +22,50 @@ from log_util import log
 # TODO: Add async version in the future when framework grows
 # TODO: Possibly support multiple tables per decorator call
 
-def table_builder_wrapper(db_name, table_name, columns):
-    def decorator(func):
-        def wrapper(*args, **kwargs):
-            conn = sqlite3.connect(db_name)
-            cursor = conn.cursor()
+default_text = "Enter Text Here"
 
-            clean_name = table_name.strip().lower()
+def table_creation(table_name, column):
+    initial = "CREATE TABLE IF NOT EXISTS"
+    title_setter = lambda n: initial + f" {n}"
+    default_column = "id INTEGER PRIMARY KEY AUTOINCREMENT"
 
-            if isinstance(columns, (list, tuple)):
-                if columns == []:
-                    log.warning(f"Columns list is empty. Returning None")
-                    return None
-                if columns:
-                    column_converted = ",\n".join(columns)
-                    cursor.execute(f"""
-                        CREATE TABLE IF NOT EXISTS {clean_name}(
-                            id INTEGER PRIMARY KEY AUTOINCREMENT,
-                            {column_converted}
-                        )
-                    """)
-            
-            conn.commit()
-            
-            result = func(*args, **kwargs)
-            conn.close()
-            return result
-        
-        return wrapper
-    return decorator
+    if table_name is None:
+        advanced_log("info",f"Table needs a name to initiate. Setting default text.")
+        initial = title_setter(default_text)
+    elif isinstance(table_name, str):
+        table_name = table_name.strip()
+        advanced_log("info",f"Table name validated! Adding it to table.")
+        initial = title_setter(table_name)
+    else:
+        advanced_log("warning",f"Invalid data type: {class_name(table_name)}. Setting default text.")
+        initial = title_setter(default_text)
+
+def columns(col_name, data_type, **constraints):
+    
+    data_types = {
+        "int" : "INTEGER",
+        "float" : "REAL",
+        "str" : "TEXT",
+        "bytes" : "BLOB",
+        "bool" : "INTEGER",
+        "NoneType" : "NULL"
+    }
+
+    if col_name is None:
+        advanced_log("warning",f"Column Name is None. Please add a name to the column. Setting default text.")
+        col_name = default_text
+    elif isinstance(col_name, str):
+        col_name.strip()
+        advanced_log("info",f"Column title validated. Setting column title to {col_name}")
+    else:
+        advanced_log("warning",f"Invalid data type: {class_name(col_name)}. Setting default text.")
+        col_name = default_text
+    
+    if data_type is None:
+        advanced_log("warning",f"data type is empty. Please enter data type. Setting default.")
+        data_type = "TEXT"
+    elif isinstance(data_type, str):
+        data_type = data_type.strip().lower()
+        if data_type in data_types:
+            verified_type = data_types[data_type]
+            advanced_log("info","")

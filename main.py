@@ -1,6 +1,6 @@
 from log_util import advanced_log
-from dictionaries.builders import application, stacked, page, drop_down, widget_shell
-from dictionaries.builders import class_name
+from dictionaries.builders import application, stacked, page, drop_down, widget_shell, label, input, button
+from dictionaries.builders import class_name, Size
 from PyQt6.QtWidgets import QApplication
 import sys
 
@@ -21,6 +21,9 @@ class Login():
     def __init__(self):
         self.children = []
         self.top_menu()
+        self.title()
+        self.username()
+        self.password()
 
     def parent_w(self):
         return page((500,300), self.children, "login")
@@ -29,12 +32,12 @@ class Login():
         children = []
 
         mode_items = ["dark", "light", "retro"]
-        mode_menu = drop_down(mode_items, None)
+        mode_menu = drop_down(mode_items, None, (100, Size.default))
         children.append(mode_menu)
         advanced_log("debug",f"Appended {class_name(mode_menu)} to {children}")
 
         language_items = ["English", "Spanish"]
-        language_menu = drop_down(language_items, None)
+        language_menu = drop_down(language_items, None, (100, Size.default))
         children.append(language_menu)
         advanced_log("debug",f"Appended {class_name(language_menu)} to {children}")
 
@@ -43,6 +46,39 @@ class Login():
 
         self.children.append(shell)
         return shell
+    
+    def title(self):
+        child = []
+        title = label("Login")
+        child.append(title)
+        shell = widget_shell("horizontal", child)
+
+        self.children.append(shell)
+        return shell       
+    
+    def username(self):
+        child = []
+
+        username = label("Username:")
+        child.append(username)
+        userentry = input("username")
+        child.append(userentry)
+
+        shell = widget_shell("horizontal", child)
+
+        self.children.append(shell)
+        return shell
+    
+    def password(self):
+        child = []
+        pw = label("Password:")
+        child.append(pw)
+        userentry = input("password")
+        child.append(userentry)
+        shell = widget_shell("horizontal", child)
+        self.children.append(shell)
+        return shell
+
 
 if __name__ == "__main__":
     initialize = QApplication(sys.argv)

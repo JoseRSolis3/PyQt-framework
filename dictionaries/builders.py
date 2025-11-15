@@ -3,12 +3,26 @@ from PyQt6.QtWidgets import (
     QPushButton, QLabel, QLineEdit, QComboBox, 
     QVBoxLayout, QHBoxLayout, QFormLayout,
 )
+from PyQt6.QtWidgets import QSizePolicy
 from PyQt6.QtCore import Qt
 from log_util import advanced_log
 from functools import reduce
 import inspect
 import sys 
 import os
+
+class Size():
+    auto = QSizePolicy.Policy.Preferred
+    fill = QSizePolicy.Policy.Expanding
+    fixed = QSizePolicy.Policy.Fixed
+    min = QSizePolicy.Policy.Minimum
+    max = QSizePolicy.Policy.Maximum
+    stretch = QSizePolicy.Policy.Expanding
+    default = QSizePolicy.Policy.Expanding
+
+size_policy = QSizePolicy.Policy
+
+
 
 widgets = [
     QWidget, QStackedWidget, QPushButton, 
@@ -25,6 +39,37 @@ cleaner = lambda var: var.strip()
 class_name = lambda var: var.__class__.__name__
 layout_setter = lambda w, l: w.setLayout(l)
 
+def size_verifier(widget, size):
+    default_size = (Size.stretch, Size.stretch)
+    if size is None:
+        advanced_log("info","Size is None. Setting up default.")
+        widget.setSizePolicy(*default_size)
+    elif isinstance(size, (list, tuple)):
+        verified_size = []
+        if len(size) == 2:
+            for i, var in enumerate(size):
+                if var is None:
+                    verified_size.append(Size.default)
+                elif isinstance(var, size_policy):
+                    verified_size.append(var)
+                elif isinstance(var, int):
+                    verified_size.append(Size.fixed)
+                    if i == 0:
+                        widget.setFixedWidth(var)
+                    else:
+                        widget.setFixedHeight(var)
+                elif var == Size.default:
+                    verified_size.append(Size.default)
+                else:
+                    verified_size.append(Size.default)
+            widget.setSizePolicy(*verified_size)
+        elif len(size) < 2:
+            advanced_log("warning",f"Missing 1 value, Setting default. Please try again.")
+            widget.setSizePolicy(*default_size)
+        else:
+            advanced_log("warning",f"Too many values. setting default. Please try again.")
+            widget.setSizePolicy(*default_size)
+        
 def application(ui_type, title):
     mw = QMainWindow()
     cw = QWidget()
@@ -152,10 +197,9 @@ def page(size, child, page_name):
     advanced_log("info",f"Widget Shell is: {class_name(shell)}")
     return shell
 
-def drop_down(child, logic):
+def drop_down(child, logic, size):
     instance = QComboBox()
     default_text = "Enter Item Here"
-
     if logic is None:
         advanced_log("info",f"No logic detected. Skipping")
 
@@ -177,6 +221,8 @@ def drop_down(child, logic):
         else:
             advanced_log("warning","Expecting a list/tuple. Adding 1 default item to drop down menu.")
             instance.addItem(default_text)
+    
+    size_verifier(instance, size)    
     return instance
 
 def widget_shell(layout, child):

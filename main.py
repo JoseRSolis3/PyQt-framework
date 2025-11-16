@@ -1,14 +1,13 @@
 from log_util import advanced_log
-from dictionaries.builders import application, stacked, page, drop_down, widget_shell, label, input, button
-from dictionaries.builders import class_name, Size
+from dictionaries.builders import Widgets, class_name, Size, Alignment
 from PyQt6.QtWidgets import QApplication
 import sys
 
 class App():
     def __init__(self):
         self.pages = [Login().parent_w()]
-        w = stacked(self.pages[0])
-        application(w, "App")
+        w = Widgets.stacked(self.pages[0])
+        Widgets.application(w, "App")
     
     def book(self, pg):
         advanced_log("info",f"Appending {pg} to {self.pages}")
@@ -26,22 +25,22 @@ class Login():
         self.password()
 
     def parent_w(self):
-        return page((500,300), self.children, "login")
+        return Widgets.page((500,300), self.children, "login")
     
     def top_menu(self):
         children = []
 
         mode_items = ["dark", "light", "retro"]
-        mode_menu = drop_down(mode_items, None, (100, Size.default))
+        mode_menu = Widgets.drop_down(mode_items, None, (Size.max, Size.default))
         children.append(mode_menu)
         advanced_log("debug",f"Appended {class_name(mode_menu)} to {children}")
 
         language_items = ["English", "Spanish"]
-        language_menu = drop_down(language_items, None, (100, Size.default))
+        language_menu = Widgets.drop_down(language_items, None, (Size.max, Size.default))
         children.append(language_menu)
         advanced_log("debug",f"Appended {class_name(language_menu)} to {children}")
 
-        shell = widget_shell("horizontal", children)
+        shell = Widgets.widget_shell(Alignment.top_right, "horizontal", children)
         advanced_log("debug",f"Passing Children:{class_name(children)} to Shell: {class_name(shell)}")
 
         self.children.append(shell)
@@ -49,9 +48,9 @@ class Login():
     
     def title(self):
         child = []
-        title = label("Login")
+        title = Widgets.label("Login")
         child.append(title)
-        shell = widget_shell("horizontal", child)
+        shell = Widgets.widget_shell(None, "horizontal", child)
 
         self.children.append(shell)
         return shell       
@@ -59,23 +58,23 @@ class Login():
     def username(self):
         child = []
 
-        username = label("Username:")
+        username = Widgets.label("Username:")
         child.append(username)
-        userentry = input("username")
+        userentry = Widgets.entry("username")
         child.append(userentry)
 
-        shell = widget_shell("horizontal", child)
+        shell = Widgets.widget_shell(None, "horizontal", child)
 
         self.children.append(shell)
         return shell
     
     def password(self):
         child = []
-        pw = label("Password:")
+        pw = Widgets.label("Password:")
         child.append(pw)
-        userentry = input("password")
+        userentry = Widgets.entry("password")
         child.append(userentry)
-        shell = widget_shell("horizontal", child)
+        shell = Widgets.widget_shell(None, "horizontal", child)
         self.children.append(shell)
         return shell
 

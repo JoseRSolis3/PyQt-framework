@@ -20,27 +20,49 @@ class Size():
     stretch = QSizePolicy.Policy.Expanding
     default = QSizePolicy.Policy.Expanding
 
-class Alignment():
-    top = lambda w: w.setAlignment(Qt.AlignmentFlag.AlignTop)
-    bottom = lambda w: w.setAlignment(Qt.AlignmentFlag.AlignBottom)
-    left = lambda w: w.setAlignment(Qt.AlignmentFlag.AlignLeft)
-    center = lambda w: w.setAlignment(Qt.AlignmentFlag.AlignCenter)
-    default = lambda w: w.setAlignment(Qt.AlignmentFlag.AlignCenter)
-    hcenter = lambda w: w.setAlignment(Qt.AlignmentFlag.AlignHCenter)
-    vcenter = lambda w: w.setAlignment(Qt.AlignmentFlag.AlignVCenter)
-    right = lambda w: w.setAlignment(Qt.AlignmentFlag.AlignRight)
+    @staticmethod
+    def set(widget, sizeStyle):
+        if sizeStyle is None:
+            advanced_log("warning",f"Size type is None. Returning default.")
+            return Size.default
+        elif not isinstance(sizeStyle, (tuple, list)):
+            advanced_log("warning",f"Invalid data type. Returning default.")
+            return widget.setSizePolicy(Size.default, Size.default)
+        else:
+            items = list(sizeStyle)
+            for i, style in enumerate(sizeStyle):
+                if not isinstance(style, QSizePolicy):
+                    advanced_log("warning",f"Invalid data type. Returning default.")
+                    items[i] = Size.default
+                else:
+                    items[i] = style
+            return widget.setSizePolicy(*items)
+                
 
-    top_left = lambda w: w.setAlignment(Qt.AlignmentFlag.AlignTop | Qt.AlignmentFlag.AlignLeft)
-    top_right = lambda w: w.setAlignment(Qt.AlignmentFlag.AlignTop | Qt.AlignmentFlag.AlignRight)
-    bottom_left = lambda w: w.setAlignment(Qt.AlignmentFlag.AlignBottom | Qt.AlignmentFlag.AlignLeft)
-    bottom_right = lambda w: w.setAlignment(Qt.AlignmentFlag.AlignBottom | Qt.AlignmentFlag.AlignRight)
+class Alignment():
+    top = Qt.AlignmentFlag.AlignTop
+    bottom = Qt.AlignmentFlag.AlignBottom
+    left = Qt.AlignmentFlag.AlignLeft
+    center = Qt.AlignmentFlag.AlignCenter
+    default = Qt.AlignmentFlag.AlignCenter
+    hcenter = Qt.AlignmentFlag.AlignHCenter
+    vcenter = Qt.AlignmentFlag.AlignVCenter
+    right = Qt.AlignmentFlag.AlignRight
+
+    top_left = Qt.AlignmentFlag.AlignTop | Qt.AlignmentFlag.AlignLeft
+    top_right = Qt.AlignmentFlag.AlignTop | Qt.AlignmentFlag.AlignRight
+    bottom_left = Qt.AlignmentFlag.AlignBottom | Qt.AlignmentFlag.AlignLeft
+    bottom_right = Qt.AlignmentFlag.AlignBottom | Qt.AlignmentFlag.AlignRight
+
+    @staticmethod
+    def set(widget, alignmentFlag):
+        return widget.setAlignment(alignmentFlag)
+
 
 class LayoutType():
     vertical = QVBoxLayout
     horizontal = QHBoxLayout
     form = QFormLayout
-
-size_policy = QSizePolicy.Policy
 
 widgets = [
     QWidget, QStackedWidget, QPushButton, 
@@ -56,62 +78,69 @@ layouts = {
 cleaner = lambda var: var.strip()
 class_name = lambda var: var.__class__.__name__
 layout_setter = lambda w, l: w.setLayout(l)
+    
+class Margins():
+    def __init__(self) -> None:
+        pass
+    
+    @staticmethod
+    def validator(func):
+        def wrapper(*args):
+            items = list(args)
+            for i, a in enumerate(items):
+                if a is None:
+                    advanced_log("warning",f"Please enter a value. Returning default")
+                    items[i] = 0
+                elif not isinstance(a, int):
+                    advanced_log("warning", f"Invalid data type, try again.")
+                    items[i] = 0
+            return func(*items)
+        return wrapper
+            
+    @staticmethod
+    @validator
+    def left(value):
+        return (value, 0, 0, 0)
 
-def size_verifier(widget, size):
-    default_size = (Size.stretch, Size.stretch)
-    if size is None:
-        advanced_log("info","Size is None. Setting up default.")
-        widget.setSizePolicy(*default_size)
-    elif isinstance(size, (list, tuple)):
-        verified_size = []
-        if len(size) == 2:
-            for i, var in enumerate(size):
-                if var is None:
-                    verified_size.append(Size.default)
-                elif isinstance(var, size_policy):
-                    verified_size.append(var)
-                elif isinstance(var, int):
-                    verified_size.append(Size.fixed)
-                    if i == 0:
-                        widget.setFixedWidth(var)
-                    else:
-                        widget.setFixedHeight(var)
-                elif var == Size.default:
-                    verified_size.append(Size.default)
-                else:
-                    verified_size.append(Size.default)
-            widget.setSizePolicy(*verified_size)
-        elif len(size) < 2:
-            advanced_log("warning",f"Missing 1 value, Setting default. Please try again.")
-            widget.setSizePolicy(*default_size)
-        else:
-            advanced_log("warning",f"Too many values. setting default. Please try again.")
-            widget.setSizePolicy(*default_size)
-        
-def alignment_verifier(widget, alignment):
-    if alignment is None:
-        advanced_log("warning",f"Alignemnt is None, returning to default alignment.")
-        Alignment.default(widget)
-    elif callable(alignment):
-        alignment(widget)
-    else:
-        advanced_log("warning",f"Invalid alignment, returning to default alignment.")
-        Alignment.default(widget)
+    @staticmethod
+    @validator
+    def top(value):
+        return (0, value, 0, 0)
+    
+    @staticmethod
+    @validator
+    def right(value):
+        return (0, 0, value, 0)
+    
+    @staticmethod
+    @validator
+    def bottom(value):
+        return (0, 0, 0, value)
+    
+    @staticmethod
+    @validator
+    def vertical(top, bottom):
+        return (0, top, 0, bottom)
+    
+    @staticmethod
+    @validator
+    def horizontal(left, right):
+        return (left, 0, right, 0)
+
+    @staticmethod
+    @validator
+    def full(left, top, right, bottom):
+        return (left, top, right, bottom)
+    
+    @staticmethod
+    def default():
+        return (2, 2, 2, 2)
 
 class Volumes():
-    #User input
-    left_margin = lambda left: QMargins(left, 0, 0, 0)
-    top_margin = lambda top: QMargins(0, top, 0, 0)
-    right_margin = lambda right: QMargins(0, 0, right, 0)
-    bottom_margin = lambda bottom: QMargins(0, 0, 0, bottom)
-    vertical_margin = lambda top, bottom: QMargins(0, top, 0, bottom)
-    horizontal_margin = lambda left, right: QMargins(left, 0, right, 0)
-    default_margin = lambda left, top, right, bottom: QMargins(left, top, right, bottom)
-    padding = lambda value: value
-    
     #Core Input
     @staticmethod
-    def margin_builder(layout, margin_type):
+    # Can be used as Volumes().marginBuilder(layout, margin_type)
+    def marginBuilder(layout, margin_type):
         if layout is None:
             advanced_log("warning",f"Layout is None. Please try again.")
             return None
@@ -122,7 +151,8 @@ class Volumes():
             advanced_log("warning",f"Invalid data type: {layout}. Please try again.")
 
     @staticmethod
-    def padding_builder(layout, value):
+    # Can be useed as Volumes().paddingBuilder(layout, value)
+    def padding(layout, value):
         if layout is None:
             advanced_log("warning",f"Layout is None, returning None. Please try again.")
             return None
@@ -283,7 +313,7 @@ class Widgets():
                 advanced_log("warning","Expecting a list/tuple. Adding 1 default item to drop down menu.")
                 instance.addItem(default_text)
         
-        size_verifier(instance, size)         
+        Size.set(instance, size)         
         return instance
     @staticmethod
     def widget_shell(alignment, layout, child):
@@ -299,7 +329,7 @@ class Widgets():
                 verified_layout = layouts[layout]()
                 advanced_log("info",f"Layout detected: {class_name(verified_layout)}(). Adding it to {class_name(shell)}")
                 shell.setLayout(verified_layout)
-                alignment_verifier(verified_layout, alignment)
+                Alignment.set(verified_layout, alignment)
                 if child is None:
                     advanced_log("warning",f"Child is {class_name(child)}. Widget Shell requires a child.")
                 elif isinstance(child, (list, tuple)):

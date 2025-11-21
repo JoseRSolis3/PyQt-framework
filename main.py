@@ -1,12 +1,13 @@
 from log_util import advanced_log
-from dictionaries.builders import Widgets, class_name, Size, Alignment
+from dictionaries.builders import Widgets, class_name, Size, Alignment, Layout
 from PyQt6.QtWidgets import QApplication
 import sys
 
 class App():
     def __init__(self):
-        self.pages = [Login().parent_w()]
+        self.pages = [Login().parentWidget()]
         w = Widgets.stacked(self.pages[0])
+        w.setCurrentIndex(0)
         Widgets.application(w, "App")
     
     def book(self, pg):
@@ -20,11 +21,11 @@ class Login():
     def __init__(self):
         self.children = []
         self.top_menu()
-        self.title()
         self.username()
         self.password()
+        self.Buttons()
 
-    def parent_w(self):
+    def parentWidget(self):
         return Widgets.page((500,300), self.children, "login")
     
     def top_menu(self):
@@ -38,23 +39,13 @@ class Login():
         language_items = ["English", "Spanish"]
         language_menu = Widgets.drop_down(language_items, None, (Size.max, Size.default))
         children.append(language_menu)
-        advanced_log("debug",f"Appended {class_name(language_menu)} to {children}")
-
-        shell = Widgets.widget_shell(Alignment.top_right, "horizontal", children)
-        advanced_log("debug",f"Passing Children:{class_name(children)} to Shell: {class_name(shell)}")
+        advanced_log("debug",f"shell = Widgets.widget_shell(Layout.horizontal -> {class_name(Layout.horizontal)}, Alignment.top_right -> {class_name(Alignment.top_right)}, childrent -> {children})")
+        shell = Widgets.widget_shell(Layout.horizontal, Alignment.top_right, children)
+        advanced_log("debug",f" SHELL AFTER INSTANTIATION = {shell}")
 
         self.children.append(shell)
         return shell
-    
-    def title(self):
-        child = []
-        title = Widgets.label("Login")
-        child.append(title)
-        shell = Widgets.widget_shell(None, "horizontal", child)
-
-        self.children.append(shell)
-        return shell       
-    
+        
     def username(self):
         child = []
 
@@ -63,7 +54,7 @@ class Login():
         userentry = Widgets.entry("username")
         child.append(userentry)
 
-        shell = Widgets.widget_shell(None, "horizontal", child)
+        shell = Widgets.widget_shell(Layout.horizontal,None, child)
 
         self.children.append(shell)
         return shell
@@ -74,11 +65,22 @@ class Login():
         child.append(pw)
         userentry = Widgets.entry("password")
         child.append(userentry)
-        shell = Widgets.widget_shell(None, "horizontal", child)
+        shell = Widgets.widget_shell(Layout.horizontal, Alignment.default, child)
+        self.children.append(shell)
+        return shell
+    
+    def Buttons(self):
+        children = []
+        signinButton = Widgets.button("signin", None)
+        children.append(signinButton)
+        signupButton = Widgets.button("signup", None)
+        children.append(signupButton)
+        shell = Widgets.widget_shell(Layout.horizontal, Alignment.default, children)
         self.children.append(shell)
         return shell
 
-
+class userDashboard():
+    pass 
 if __name__ == "__main__":
     initialize = QApplication(sys.argv)
     advanced_log("info",f"Iinitializing App")

@@ -11,6 +11,127 @@ import inspect
 import sys 
 import os
 
+defaultText = "Enter Text Here"
+cleaner = lambda var: var.strip()
+class_name = lambda var: var.__class__.__name__
+layout_setter = lambda w, l: w.setLayout(l)
+widgetType = [
+    QWidget, QStackedWidget, QPushButton, 
+    QLabel, QLineEdit, QComboBox
+]
+
+class Logic():
+    @staticmethod
+    def currentIndex(widget, index):
+        if widget is None or index is None:
+            advanced_log("warning",f"input is None. Returning None.")
+            return None
+        if isinstance(widget, (QStackedWidget, QComboBox)):
+            advanced_log("info",f"Verified, widget = {class_name(widget)}. Continuing to index verification.")
+            if isinstance(index, int):
+                try:
+                    advanced_log("info",f"Verified, index = {class_name(index)}. Continuing to set logic.")
+                    widget.setCurrentIndex(index)
+                except IndexError:
+                    advanced_log("warning",f"Index is out of bounds.")
+                except Exception as e:
+                    advanced_log("error",f"Error - {e}")
+            else:
+                advanced_log("warning",f"Invalid data type for index")
+                return None
+        else:
+            advanced_log("warning",f"Invalid data type for widget")
+            return None
+
+    @staticmethod
+    def clicked(widget, action):
+        if action is None:
+            advanced_log("warning",f"Action is None. Returning None")
+            return None
+        elif isinstance(widget, QPushButton):
+            advanced_log("info",f"Widget is {class_name(widget)}")
+            widget.clicked.connect(action)
+        else:
+            advanced_log("warning",f"Wrong widget for logic. Widget is not a button.")
+    
+    @staticmethod
+    def activatedCombobox(widget, action, returnText = True):
+        if action is None:
+            advanced_log("warning",f"Action is None. Returning None")
+            return None
+        if isinstance(widget, QComboBox):
+            advanced_log("info",f"Widget is {class_name(widget)}")
+            if returnText:
+                advanced_log("info",f"Connecting activated signal to return selected text (str).")
+                widget.activated[str].connect(action)
+            elif not returnText:
+                advanced_log("info",f"Connecting activated signal to return selected index (int).")
+                widget.activated[int].connect(action)
+        else:
+            advanced_log("warning",f"Wrong widget for logic. Widget is not a drop box.")
+        
+    @staticmethod
+    def activatedPages(list, pageName, action):
+        variables = [list, pageName, action]
+        for var in variables:
+            if var is None:
+                advanced_log("warning",f"{var} is None. returning None.")
+                return None
+        
+
+class ObjectName():
+    @staticmethod
+    def set(widget, objectName):
+        if objectName is None:
+            advanced_log("warning",f"Object Name is empty. Setting default.")
+            widget.setObjectName(defaultText)
+        elif not isinstance(objectName, str):
+            advanced_log("warning",f"Invalid data type: {class_name(objectName)}. Setting default.")
+            widget.setObjectName(defaultText)
+        else:
+            advanced_log("info",f"Verified. Setting {objectName}.")
+            cleaned_name = cleaner(objectName)
+            widget.setObjectName(cleaned_name)
+
+class Children():
+    @staticmethod
+    def set(parent, child):
+        advanced_log("info",f"Raw Input: [parent = {class_name(parent)}] [child = {class_name(child)}]")
+        if child is None:
+            advanced_log("info",f"Child is None. Setting default")
+            parent.addWidget(QWidget())
+        elif isinstance(child, (tuple, list)):
+            advanced_log("info", f"Multiple children detected.")
+            for c in child:
+                if not isinstance(c, (tuple(widgetType), str)):
+                    advanced_log("warning",f"Invalid data type for child. Setting default.")
+                    if isinstance(parent, QComboBox):
+                        advanced_log("info",f"Adding {class_name(c)} to {class_name(parent)}.")
+                        parent.addItem(defaultText)
+                    elif isinstance(parent, QStackedWidget):
+                        advanced_log("info",f"Adding {class_name(c)} to {class_name(parent)}.")
+                        parent.addWidget(QWidget())
+                    elif isinstance(parent, QLayout):
+                        advanced_log("info",f"Adding {class_name(c)} to {class_name(parent)}.")
+                        parent.addWidget(QWidget())
+                else:
+                    advanced_log("info",f"Verified. Adding {class_name(c)}")
+                    if isinstance(parent, QComboBox):
+                        advanced_log("info",f"Adding {class_name(c)} to {class_name(parent)}.")
+                        parent.addItem(c)
+                    elif isinstance(parent, QStackedWidget):
+                        advanced_log("info",f"Adding {class_name(c)} to {class_name(parent)}.")
+                        parent.addWidget(c)
+                    else:
+                        advanced_log("info",f"Adding {class_name(c)} to {class_name(parent)}.")
+                        parent.addWidget(c)
+        else:
+            advanced_log("info",f"Verified. Adding {class_name(child)}.")
+            if isinstance(parent, QComboBox):
+                parent.addItem(child)
+            else:
+                parent.addWidget(child)
+
 class Size():
     auto = QSizePolicy.Policy.Preferred
     fill = QSizePolicy.Policy.Expanding
@@ -26,19 +147,29 @@ class Size():
             advanced_log("warning",f"Size type is None. Returning default.")
             return Size.default
         elif not isinstance(sizeStyle, (tuple, list)):
-            advanced_log("warning",f"Invalid data type. Returning default.")
+            advanced_log("warning",f"Invalid data type: size = {class_name(sizeStyle)}. Returning default.")
             return widget.setSizePolicy(Size.default, Size.default)
         else:
             items = list(sizeStyle)
+            isInteger = False
             for i, style in enumerate(sizeStyle):
-                if not isinstance(style, QSizePolicy):
-                    advanced_log("warning",f"Invalid data type. Returning default.")
-                    items[i] = Size.default
-                else:
+                if isinstance(style, int):
+                    advanced_log("info",f"Fixed size detected. applying {style}")
+                    isInteger = True
                     items[i] = style
-            return widget.setSizePolicy(*items)
+                elif isinstance(style, QSizePolicy.Policy):
+                    advanced_log("info",f"Style is {class_name(style)}. Applying {style} to {class_name(widget)}")
+                    items[i] = style                    
+                else:
+                    advanced_log("warning",f"Invalid data type: style = {class_name(style)}. Data type accepted is QSizePolicy. Returning default.")
+                    items[i] = Size.default
+            if isInteger == True:
+                widget.setSizePolicy(Size.fixed,Size.fixed)
+                widget.resize(*items)
+                advanced_log("info",f"Resize: {items}")
+            else:
+                return widget.setSizePolicy(*items)
                 
-
 class Alignment():
     top = Qt.AlignmentFlag.AlignTop
     bottom = Qt.AlignmentFlag.AlignBottom
@@ -55,30 +186,46 @@ class Alignment():
     bottom_right = Qt.AlignmentFlag.AlignBottom | Qt.AlignmentFlag.AlignRight
 
     @staticmethod
-    def set(widget, alignmentFlag):
-        return widget.setAlignment(alignmentFlag)
+    def set(layout, alignmentFlag):
+        advanced_log("debug",f"Raw data types: [layout:{layout} = {class_name(layout)}] [alignmentFlag: {alignmentFlag} = {class_name(alignmentFlag)}]")
+        if alignmentFlag is None:
+            advanced_log("warning",f"Alignment is None. Setting default.")
+            layout.setAlignment(Alignment.default)
+        elif isinstance(alignmentFlag, Qt.AlignmentFlag):
+            advanced_log("info",f"Verified: AlignmentFlag = {class_name(alignmentFlag)}.")
+            layout.setAlignment(alignmentFlag)
+        else:
+            advanced_log("warning",f"Invalid data type. Setting default.")
+            layout.setAlignment(Alignment.default)
 
-
-class LayoutType():
+class Layout():
     vertical = QVBoxLayout
     horizontal = QHBoxLayout
     form = QFormLayout
+    default = QVBoxLayout
 
-widgets = [
-    QWidget, QStackedWidget, QPushButton, 
-    QLabel, QLineEdit, QComboBox
-]
-
-layouts = {
-    "vertical" : QVBoxLayout,
-    "horizontal" : QHBoxLayout,
-    "form" : QFormLayout
-}
-
-cleaner = lambda var: var.strip()
-class_name = lambda var: var.__class__.__name__
-layout_setter = lambda w, l: w.setLayout(l)
-    
+    @staticmethod
+    def set(widget, type):
+        advanced_log("info",f"Raw input: [widget = {class_name(widget)}] [type = {class_name(type)}]")
+        if type is None:
+            advanced_log("warning",f"Layout type needs to have a value. Setting default.")
+            widget.setLayout(Layout.default())
+            return widget.layout()        
+        try:
+            advanced_log("info",f"Before instantiating: {type} = {class_name(type)}")
+            verifiedType = type()
+            advanced_log("info",f"After instantiating: {verifiedType} = {class_name(verifiedType)}") 
+            if isinstance(verifiedType, QLayout):
+                widget.setLayout(verifiedType)
+                advanced_log("info",f"Returning: {class_name(widget.layout())}")
+                return widget.layout()
+        except:
+            type = Layout.default()
+            if isinstance(type, QLayout):
+                widget.setLayout(type)
+                advanced_log("info",f"Returning: {class_name(widget.layout())}")
+                return widget.layout()
+        
 class Margins():
     def __init__(self) -> None:
         pass
@@ -136,212 +283,102 @@ class Margins():
     def default():
         return (2, 2, 2, 2)
 
-class Volumes():
-    #Core Input
     @staticmethod
-    # Can be used as Volumes().marginBuilder(layout, margin_type)
-    def marginBuilder(layout, margin_type):
-        if layout is None:
-            advanced_log("warning",f"Layout is None. Please try again.")
-            return None
-        
-        if isinstance(layout, QLayout):
-            layout.setContentsMargins(margin_type)
+    def set(layout, type):
+        return layout.setContentsMargins(type)
+    
+class Padding():
+    @staticmethod
+    def set(layout, value):
+        if not isinstance(value, int):
+            advanced_log("warning",f"Invalid data type. Returning Default.")
+            return 2
         else:
-            advanced_log("warning",f"Invalid data type: {layout}. Please try again.")
-
-    @staticmethod
-    # Can be useed as Volumes().paddingBuilder(layout, value)
-    def padding(layout, value):
-        if layout is None:
-            advanced_log("warning",f"Layout is None, returning None. Please try again.")
-            return None
-        layout.setSpacing(value)
+            return layout.setSpacing(value)
     
 class Widgets():
     @staticmethod
-    def application(ui_type, title):
-        mw = QMainWindow()
-        cw = QWidget()
-        cw_layout = QVBoxLayout()
-
-        advanced_log("info",f"Raw ui_type: {class_name(ui_type)}")
+    def application(uiType, title):
+        print("\n")
+        mainWindow = QMainWindow()
+        centralWidget = QWidget()
+        centralWidgetLayout = QVBoxLayout()
+        mainWindow.setGeometry(100,100,400,200)
+        mainWindow.setCentralWidget(centralWidget)
+        centralWidget.setLayout(centralWidgetLayout)
+        advanced_log("debug",f"Raw Input: [{uiType} = {class_name(uiType)}] [{title} = {class_name(title)}]")
 
         if title is None:
-            advanced_log("info",f"Title is None. Setting default title.")
-            mw.setWindowTitle("Default Title")
+            advanced_log("warning",f"Title is None. Setting default text.")
+            mainWindow.setWindowTitle(defaultText)
+        elif not isinstance(title, str):
+            advanced_log("warning",f"Invalid data type: {title} is {class_name(title)}. Setting default text.")
+            mainWindow.setWindowTitle(defaultText)
         else:
-            cleaned_title = cleaner(title)
-            mw.setWindowTitle(cleaned_title)
+            cleanedTitle = cleaner(title)
+            advanced_log("info",f"Verified! Setting title to: {cleanedTitle}")
+            mainWindow.setWindowTitle(cleanedTitle)
 
-        if ui_type is None:
-            advanced_log("info",f"UI_TYPE is:{class_name(ui_type)}. Skipping")
-            pass
-        elif isinstance(ui_type, tuple(widgets)):
-            advanced_log("info",f"Setting ui_type: {class_name(ui_type)} to {class_name(cw_layout)}")
-            cw_layout.addWidget(ui_type)
+        if uiType is None:
+            advanced_log("warning",f"uiType is None. Setting stacked.")
+            centralWidgetLayout.addWidget(QStackedWidget())
+        elif not isinstance(uiType, tuple(widgetType)):
+            advanced_log("warning",f"invalid data type! Expected: QWidgets. Entered: {class_name(uiType)}. Retruning stacked.")
+            centralWidgetLayout.addWidget(QStackedWidget())
         else:
-            advanced_log("warning","ui_type needs to be a widget excluding (Main Window and App).")
+            advanced_log("info",f"Verified! Setting uiType to {class_name(uiType)}")
+            centralWidgetLayout.addWidget(uiType)
 
-        mw.setGeometry(100,100,400,200)
-        advanced_log("info",f"Default App Geometry: (100, 100, 400, 200)")
-
-        advanced_log("info",f"Seting Layout: {class_name(cw_layout)} to {class_name(cw)}.")
-        cw.setLayout(cw_layout)
-
-        advanced_log("info",f"Setting Central Widget: {class_name(cw)} to {class_name(mw)}.")
-        mw.setCentralWidget(cw)
-
-        if hasattr(mw, "show"):
-            advanced_log("info",f"Showing {class_name(mw)}.")
-            mw.show()
-        else:
-            advanced_log("warning",f"{class_name(mw)} does not have the attribure 'show'")
-        return mw
+        Size.set(centralWidget, (Size.fill, Size.fill))
+        advanced_log("info",f"Showing application.")
+        mainWindow.show()
+        return mainWindow
+     
     @staticmethod
     def stacked(child):
-        spine = QStackedWidget()
-        # TODO Check if its None
-        if child is None:
-            return spine
-        
-        # TODO Check if its a list/tuple
-        if isinstance(child, (list, tuple)):
-            # TODO Check if its not () or []
-            if not child:
-                advanced_log("warning",f"Child list/tuple is empty. Please add a page (child).")
-                return spine
-            for c in child:
-                # TODO Check if its a QWidget
-                advanced_log("info",f"Child is {class_name(c)}")
-                if isinstance(c, QWidget):
-                    advanced_log("info",f"Setting Child widget: {class_name(c)} to {class_name(spine)}")
-                    spine.addWidget(c)
-                elif isinstance(c, (list, tuple)):
-                    advanced_log("warning","Please unpack list/tuple in list/tuple using (*list)")
-                else:
-                    advanced_log("warning","Core widget for pages should be a QWidget.")
-            # TODO Return the stacked widget
-            return spine
-        elif isinstance(child, QWidget):
-            spine.addWidget(child)
-            return spine
-        else:
-            advanced_log("warning",f"Invalid data types entered: {child}. Please try again.")
-            return spine
+        print("\n")
+        instance = QStackedWidget()
+        Children.set(instance, child)
+        return instance
+    
     @staticmethod
     def page(size, child, page_name):
         shell = QWidget()
         layout = QVBoxLayout()
-        default_size = (500,300)
-        default_text = "Enter Text Here"
-
-        if size is None:
-            advanced_log("warning",f"size is None. Returnin default.")
-            shell.resize(*default_size)
-
-        if child is None:
-            advanced_log("info",f"Child is None. Skipping")  
-
-        if page_name is None:
-            advanced_log("warning",f"Page name is None. Returning default.")
-            shell.setObjectName(default_text)
-        
-        if isinstance(size, (list, tuple)):
-            advanced_log("info",f"Raw size: {size}")
-            verified_size = []
-            for integer in size:
-                if isinstance(integer, (int, float)):
-                    verified_size.append(integer)
-                else:
-                    shell.resize(*default_size)
-                    break
-            advanced_log("info",f"Verified size: {verified_size}")
-            if len(verified_size) == 2:
-                advanced_log("info",f"Fixed Size detected, applying (*{verified_size}).")
-                shell.setFixedSize(*verified_size)
-            else:
-                advanced_log("warning",f"Length of int's is not 2 or 4. Please try again. Setting default.")
-                shell.setFixedSize(*default_size)
-        
-        if isinstance(page_name, str):
-            cleaned_name = cleaner(page_name)
-            if not cleaned_name:
-                shell.setObjectName(default_text)
-            else:
-                shell.setObjectName(cleaned_name)
-
-        if isinstance(child, (list, tuple)):
-            for c in child:
-                if isinstance(c, tuple(widgets)):
-                    advanced_log("info",f"Adding {class_name(c)} to {class_name(layout)}")
-                    layout.addWidget(c)
-                else:
-                    advanced_log("warning",f"Invalid widget: {class_name(c)}. Child not added.")
-        elif isinstance(child, tuple(widgets)):
-            layout.addWidget(child)
-        else:
-            advanced_log("warning",f"Invalid Child instance type. it's currently: {class_name(child)}. Please try again.")
-            
         shell.setLayout(layout)
-        advanced_log("info",f"Widget Shell is: {class_name(shell)}")
+        Size.set(shell, size)
+        ObjectName.set(shell, page_name) 
+        advanced_log("debug",f"Children.set({layout}, {child})")
+        Children.set(layout, child)         
         return shell
+    
     @staticmethod
     def drop_down(child, logic, size):
         instance = QComboBox()
-        default_text = "Enter Item Here"
-
         if logic is None:
             advanced_log("info",f"No logic detected. Skipping")
-
-        if child is None:
-            advanced_log("info",f"Child is None. Adding 1 default item to drop down menu.")
-            instance.addItem(default_text)
-        else:
-            if isinstance(child, (list, tuple)):
-                if not child:
-                    advanced_log("warning",f"List is empty. Adding 1 default item to drop down menu.")
-                    instance.addItem(default_text)
-                for c in child:
-                    if isinstance(c, str):
-                        advanced_log("info",f"Adding {c} to {class_name(instance)}")
-                        instance.addItem(c)
-                    else:
-                        advanced_log("warning",f"Invalid Data type: {class_name(c)}. Adding 1 default item to drop down menu.")
-                        instance.addItem(default_text)
-            else:
-                advanced_log("warning","Expecting a list/tuple. Adding 1 default item to drop down menu.")
-                instance.addItem(default_text)
-        
-        Size.set(instance, size)         
+        Children.set(instance, child)
+        Size.set(instance, size)        
         return instance
+    
     @staticmethod
-    def widget_shell(alignment, layout, child):
+    def widget_shell(layout, alignment, child):
+        print("\n")
+        advanced_log("info",f"Raw Input: [{layout} = {class_name(layout)}] [{alignment} = {class_name(alignment)}] [{child} = {class_name(child)}]")
         shell = QWidget()
-        default_layout = QVBoxLayout
-        if layout is None:
-            advanced_log("warning",f"QWidget needs a layout. Setting default. Please try again.")
-            shell.setLayout(default_layout())  
-        if isinstance(layout, str):
-            layout.strip().lower()
-            advanced_log("info",f"Raw layout input: {class_name(layout)}.")
-            if layout in layouts:
-                verified_layout = layouts[layout]()
-                advanced_log("info",f"Layout detected: {class_name(verified_layout)}(). Adding it to {class_name(shell)}")
-                shell.setLayout(verified_layout)
-                Alignment.set(verified_layout, alignment)
-                if child is None:
-                    advanced_log("warning",f"Child is {class_name(child)}. Widget Shell requires a child.")
-                elif isinstance(child, (list, tuple)):
-                    for c in child:
-                        if isinstance(c, tuple(widgets)):
-                            advanced_log("info",f"Widget detected: {class_name(c)}. Adding it to layout")
-                            verified_layout.addWidget(c)        
-                else:
-                    advanced_log("warning",f"Invalid data type: {class_name(child)}. Please try again.")
-        else:
-            advanced_log("warning",f"Invalid input, please try again.")
+
+        advanced_log("info",f"layout = Layout.set(shell, layout) -> layout = {class_name(layout)}")  
+        verifiedLayout = Layout.set(shell, layout)  
+
+        advanced_log("info",f"Alignment.set(verifiedLayout, alignment) -> Alignment.set({class_name(verifiedLayout)}, {class_name(alignment)})")
+        Alignment.set(verifiedLayout, alignment)
+
+        advanced_log("info",f"Children.set(verifiedLayout, child) -> Children.set({class_name(verifiedLayout)}, {class_name(child)})")
+        Children.set(verifiedLayout, child)
+
+        advanced_log("info",f"Verified Input: [{layout} = {class_name(verifiedLayout)}] [{alignment} = {class_name(alignment)}] [{child} = {class_name(child)}]")
         return shell
+        
     @staticmethod
     def label(text):
         instance = QLabel()
@@ -351,25 +388,27 @@ class Widgets():
             advanced_log("info","Text is None or empty. Setting default text.")
             instance.setText(default_text)
         elif isinstance(text, str):
-            text = text.strip()
-            instance.setText(text)
+            cleanedText = cleaner(text)
+            instance.setText(cleanedText)
         else:
             advanced_log("warning",f"Invalid data type: {class_name(text)}. Setting default text")
             instance.setText(default_text)
         return instance
+    
     @staticmethod
-    def entry(place_holder):
+    def entry(placeHolder):
         instance = QLineEdit()
         
-        if place_holder is None or place_holder == "":
+        if placeHolder is None or placeHolder == "":
             advanced_log("info",f"Placeholder is None or empty. Displaying empty input.")
-        elif isinstance(place_holder, str):
+        elif isinstance(placeHolder, str):
             advanced_log("info",f"Placeholder detected. Applying to input.")
-            place_holder = place_holder.strip()
-            instance.setPlaceholderText(place_holder)
+            cleanedPlaceHolder = cleaner(placeHolder)
+            instance.setPlaceholderText(cleanedPlaceHolder)
         else:
             advanced_log("warning",f"Placeholder is the wrong data type. Please try again.")
         return instance
+    
     @staticmethod
     def button(text, logic):
         default_text = "Enter Text Here"
@@ -383,7 +422,7 @@ class Widgets():
             instance.setText(text if isinstance(text, str) else default_text)
         
         if logic is None:
-            advanced_log("info",f"Logic is None. Skipping.")
+            advanced_log("info",f"Logic is None.")
         elif callable(logic):
             advanced_log("info",f"Logic detected! Applying logic to {instance}()")
             instance.clicked.connect(logic)

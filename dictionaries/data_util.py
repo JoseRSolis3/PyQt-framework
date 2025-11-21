@@ -23,49 +23,57 @@ from dictionaries.builders import class_name
 # TODO: Possibly support multiple tables per decorator call
 
 default_text = "Enter Text Here"
+errorMessage = f"User entered reserved keywords for title. Please rename."
+reservedKeywords = [
+    "select", "where", "order", "create",
+    "from", "group", "having", "join",
+    "delete", "alter", "update"
+]
 
-def table_creation(table_name, column):
-    initial = "CREATE TABLE IF NOT EXISTS"
-    title_setter = lambda n: initial + f" {n}"
-    default_column = "id INTEGER PRIMARY KEY AUTOINCREMENT"
+class Table():
+    @staticmethod
+    def title(title):
+        if title is None:
+            advanced_log("warning",f"Title is none or empty.")
+            raise ValueError("Title is none or empty.")
+        elif isinstance(title, str):
+            safeTitle = "_".join(title.strip().split()).lower()
+            if safeTitle != "":
+                advanced_log("info",f"Verified. Setting title as: {safeTitle}")
+                if safeTitle in reservedKeywords:
+                    advanced_log("warning",errorMessage)
+                    raise ValueError(errorMessage)
+                return safeTitle
+            else:
+                advanced_log("warning",f"title is an empty space. Try again.")
+                raise ValueError("title is an empty space. Try again.")
+        else:
+            advanced_log("warning",f"Invalid data type.")
+            raise ValueError("Invalid data type.")
 
-    if table_name is None:
-        advanced_log("info",f"Table needs a name to initiate. Setting default text.")
-        initial = title_setter(default_text)
-    elif isinstance(table_name, str):
-        table_name = table_name.strip()
-        advanced_log("info",f"Table name validated! Adding it to table.")
-        initial = title_setter(table_name)
-    else:
-        advanced_log("warning",f"Invalid data type: {class_name(table_name)}. Setting default text.")
-        initial = title_setter(default_text)
+class Column():
+    int = "INTEGER"
+    float = "REAL"
+    str = "TEXT"
+    bytes = "BLOB"
+    bool = "INTEGER"
+    NoneType = "NULL"
+    create = "CREATE TABLE IF NOT EXISTS"
+    mainColumn = "id INTEGER PRIMARY KEY AUTOINCREMENT"
 
-def columns(col_name, data_type, **constraints):
-    
-    data_types = {
-        "int" : "INTEGER",
-        "float" : "REAL",
-        "str" : "TEXT",
-        "bytes" : "BLOB",
-        "bool" : "INTEGER",
-        "NoneType" : "NULL"
-    }
-
-    if col_name is None:
-        advanced_log("warning",f"Column Name is None. Please add a name to the column. Setting default text.")
-        col_name = default_text
-    elif isinstance(col_name, str):
-        col_name.strip()
-        advanced_log("info",f"Column title validated. Setting column title to {col_name}")
-    else:
-        advanced_log("warning",f"Invalid data type: {class_name(col_name)}. Setting default text.")
-        col_name = default_text
-    
-    if data_type is None:
-        advanced_log("warning",f"data type is empty. Please enter data type. Setting default.")
-        data_type = "TEXT"
-    elif isinstance(data_type, str):
-        data_type = data_type.strip().lower()
-        if data_type in data_types:
-            verified_type = data_types[data_type]
-            advanced_log("info","")
+    @staticmethod
+    def title(title):
+        if title is None:
+            advanced_log("warning",f"No title provided Returning empty string.")
+            return ""
+        elif isinstance(title, str):
+            advanced_log("info",f"Title is a string!")
+            title = title.strip().lower()
+            if title in reservedKeywords:
+                advanced_log("warning", errorMessage)
+                raise ValueError(errorMessage)
+            else:
+                return title
+        else:
+            advanced_log("warning",f"Invalid data type. Returning empty string.")
+            return ""

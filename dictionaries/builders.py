@@ -7,6 +7,7 @@ from PyQt6.QtWidgets import QSizePolicy
 from PyQt6.QtCore import Qt, QMargins
 from log_util import advanced_log
 from functools import reduce
+from api_util import Check
 import inspect
 import sys 
 import os
@@ -22,7 +23,7 @@ widgetType = [
 
 class Logic():
     @staticmethod
-    def currentIndex(widget, index):
+    def currentIndex(widget: QStackedWidget | QComboBox, index: int):
         if widget is None or index is None:
             advanced_log("warning",f"input is None. Returning None.")
             return None
@@ -44,7 +45,7 @@ class Logic():
             return None
 
     @staticmethod
-    def clicked(widget, action):
+    def clicked(widget: QPushButton, action):
         if action is None:
             advanced_log("warning",f"Action is None. Returning None")
             return None
@@ -55,7 +56,7 @@ class Logic():
             advanced_log("warning",f"Wrong widget for logic. Widget is not a button.")
     
     @staticmethod
-    def activatedCombobox(widget, action, returnText = True):
+    def activatedCombobox(widget: QComboBox, action, returnText = True):
         if action is None:
             advanced_log("warning",f"Action is None. Returning None")
             return None
@@ -97,10 +98,8 @@ class Children():
     @staticmethod
     def set(parent, child):
         advanced_log("info",f"Raw Input: [parent = {class_name(parent)}] [child = {class_name(child)}]")
-        if child is None:
-            advanced_log("info",f"Child is None. Setting default")
-            parent.addWidget(QWidget())
-        elif isinstance(child, (tuple, list)):
+        Check.none(parent, child)
+        if isinstance(child, (tuple, list)):
             advanced_log("info", f"Multiple children detected.")
             for c in child:
                 if not isinstance(c, (tuple(widgetType), str)):
@@ -142,11 +141,9 @@ class Size():
     default = QSizePolicy.Policy.Expanding
 
     @staticmethod
-    def set(widget, sizeStyle):
-        if sizeStyle is None:
-            advanced_log("warning",f"Size type is None. Returning default.")
-            return Size.default
-        elif not isinstance(sizeStyle, (tuple, list)):
+    def set(widget, sizeStyle: tuple | list):
+        Check.none(widget, sizeStyle)
+        if not isinstance(sizeStyle, (tuple, list)):
             advanced_log("warning",f"Invalid data type: size = {class_name(sizeStyle)}. Returning default.")
             return widget.setSizePolicy(Size.default, Size.default)
         else:
@@ -298,7 +295,7 @@ class Padding():
     
 class Widgets():
     @staticmethod
-    def application(uiType, title):
+    def application(uiType, title: str):
         print("\n")
         mainWindow = QMainWindow()
         centralWidget = QWidget()
@@ -308,21 +305,13 @@ class Widgets():
         centralWidget.setLayout(centralWidgetLayout)
         advanced_log("debug",f"Raw Input: [{uiType} = {class_name(uiType)}] [{title} = {class_name(title)}]")
 
-        if title is None:
-            advanced_log("warning",f"Title is None. Setting default text.")
-            mainWindow.setWindowTitle(defaultText)
-        elif not isinstance(title, str):
-            advanced_log("warning",f"Invalid data type: {title} is {class_name(title)}. Setting default text.")
-            mainWindow.setWindowTitle(defaultText)
-        else:
-            cleanedTitle = cleaner(title)
-            advanced_log("info",f"Verified! Setting title to: {cleanedTitle}")
-            mainWindow.setWindowTitle(cleanedTitle)
+        Check.none(uiType, title)
+        Check.String(title)
+        cleanedTitle = cleaner(title)
+        advanced_log("info",f"Verified! Setting title to: {cleanedTitle}")
+        mainWindow.setWindowTitle(cleanedTitle)
 
-        if uiType is None:
-            advanced_log("warning",f"uiType is None. Setting stacked.")
-            centralWidgetLayout.addWidget(QStackedWidget())
-        elif not isinstance(uiType, tuple(widgetType)):
+        if not isinstance(uiType, tuple(widgetType)):
             advanced_log("warning",f"invalid data type! Expected: QWidgets. Entered: {class_name(uiType)}. Retruning stacked.")
             centralWidgetLayout.addWidget(QStackedWidget())
         else:
@@ -335,14 +324,14 @@ class Widgets():
         return mainWindow
      
     @staticmethod
-    def stacked(child):
+    def stacked(child: QWidget):
         print("\n")
         instance = QStackedWidget()
         Children.set(instance, child)
         return instance
     
     @staticmethod
-    def page(size, child, page_name):
+    def page(size: list | tuple, child, page_name: str):
         shell = QWidget()
         layout = QVBoxLayout()
         shell.setLayout(layout)
@@ -353,7 +342,7 @@ class Widgets():
         return shell
     
     @staticmethod
-    def drop_down(child, logic, size):
+    def drop_down(child, logic, size: list | tuple):
         instance = QComboBox()
         if logic is None:
             advanced_log("info",f"No logic detected. Skipping")

@@ -1,9 +1,4 @@
-text = "hello world"
+dictionary = {"item1": 123, "item2": 1234}
 
-splitText = text.split()
-
-print(splitText)
-
-joinedText = "_".join(splitText)
-
-print(joinedText)
+for dict in dictionary:
+    print(dictionary[dict])

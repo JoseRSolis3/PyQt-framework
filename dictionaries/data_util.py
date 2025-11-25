@@ -3,7 +3,6 @@ from log_util import advanced_log
 from dictionaries.builders import class_name
 
 
-# TODO: Column Name Setter
 # TODO: Validate column syntax (ensure each entry contains a name and type)
 # TODO: Allow dynamic table alterations (add new columns if table already exists)
 # TODO: Add type checking for db_name and table_name inputs
@@ -31,6 +30,15 @@ reservedKeywords = [
 ]
 
 class Table():
+    
+    @staticmethod
+    def commit(dataBase, command):
+        conn = sqlite3.connect(dataBase)
+        cursor = conn.cursor()
+        cursor.execute(command)
+        conn.commit()
+        conn.close()
+
     @staticmethod
     def title(title):
         if title is None:
@@ -60,6 +68,7 @@ class Column():
     NoneType = "NULL"
     create = "CREATE TABLE IF NOT EXISTS"
     mainColumn = "id INTEGER PRIMARY KEY AUTOINCREMENT"
+    tables = []
 
     @staticmethod
     def title(title):
@@ -77,3 +86,28 @@ class Column():
         else:
             advanced_log("warning",f"Invalid data type. Returning empty string.")
             return ""
+    
+    @staticmethod
+    def insert(tableName, dictionaryItems):
+        if tableName is None:
+            advanced_log("warning", "Please enter table name to insert.")
+            raise ValueError("Please enter table name to insert.")
+        elif isinstance(dictionaryItems, (list, tuple)):
+            advanced_log("info", f"Verified. Dictionary items detected. Continuing verification.")
+            token = []
+            value = []
+            for i, item in dictionaryItems:
+                if i == 0:
+                    if isinstance(item, str):
+                        advanced_log("info",f"Verified. Item is a token.")
+                        token.append(item)
+                    else:
+                        advanced_log("warning",f"Invalid data type. token should be a string.")
+                        raise ValueError("Invalid data type. token should be a string.")
+                else:
+                    if isinstance(item, str):
+                        advanced_log("info",f"Verified. Item is a doctionary value.")
+                        value.append(item)
+                    else:
+                        advanced_log("warning",f"Invalid data type. Value should be a string.")
+                        raise ValueError("Invalid data type. Value should be a string.")

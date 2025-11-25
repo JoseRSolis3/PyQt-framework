@@ -56,11 +56,11 @@ class Check():
         return True
 
     @staticmethod
-    def List(*args: list):
+    def List(*args: list[int] | list[str] | list[float] | None):
         for arg in args:
             if not isinstance(arg, list):
                 advanced_log("warning",f"{arg} is not a list.")
-                raise ValueError(f"{arg} is not a list.")
+                return False
         return True
     
     @staticmethod

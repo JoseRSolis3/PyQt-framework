@@ -1,6 +1,7 @@
 import sqlite3
 from log_util import advanced_log
 from dictionaries.builders import class_name
+from api_util import Check
 
 
 # TODO: Validate column syntax (ensure each entry contains a name and type)
@@ -23,91 +24,118 @@ from dictionaries.builders import class_name
 
 default_text = "Enter Text Here"
 errorMessage = f"User entered reserved keywords for title. Please rename."
-reservedKeywords = [
+reservedKeywords = set([
     "select", "where", "order", "create",
     "from", "group", "having", "join",
     "delete", "alter", "update"
-]
+])
+
+class Library():
+    def __init__(self) -> None:
+        self.dataBaseDirectory = set()
+        self.tableDirectory = {}
+        self.columnDirectory = {}
+    
+    def tableRegistration(self, tableName: str, value: str):
+        if tableName in self.tableDirectory:
+            return False
+        self.tableDirectory[tableName] = value
+        return True
+    
+    def columnRegistration(self, columnName:str, values: dict):
+        if columnName in self.columnDirectory:
+            return False
+        self.columnDirectory[columnName] = values
+        return True
+    
+    def dataBaseRegistration(self, dataBaseName: str):
+        if dataBaseName in self.dataBaseDirectory:
+            return False
+        self.dataBaseDirectory.add(dataBaseName)
+        return True
+    
+    def search(self, startsWith: str):
+       Check.none(startsWith)
+       Check.String(startsWith)
+       return {
+            name: self.tableDirectory[name]
+            for name in self.tableDirectory
+            if name.startswith(startsWith)
+       }
+
+universalLibrary = Library()
 
 class Table():
-    
     @staticmethod
-    def commit(dataBase, command):
+    def create(dataBaseName: str, tableName: str):
+        Check.none(dataBaseName, tableName)
+        Check.String(dataBaseName, tableName)
+        if tableName in reservedKeywords:
+            raise NameError(f"{tableName} is a reserved keyword")
+        tableName = tableName.strip().lower()
+        command = f"""
+            CREATE TABLE IF NOT EXISTS {tableName}(
+            id INTEGER PRIMARY KEY AUTOINCREMENT
+            );
+        """
+        universalLibrary.tableRegistration(tableName, command)
+        Table.commit(dataBaseName, command, None)
+
+    @staticmethod
+    def delete(dataBaseName: str, tableName: str):
+        Check.none(dataBaseName, tableName, )
+        Check.String(dataBaseName, tableName)
+        if tableName in universalLibrary.tableDirectory:
+            sqlCommand = f"DROP TABLE {tableName}"
+            Table.commit(dataBaseName, sqlCommand, None)
+
+    @staticmethod
+    def commit(dataBase: str, sqlCommand: str, parameters: tuple | dict | None = None):
+        Check.none(dataBase, sqlCommand, parameters)
+        Check.String(dataBase, sqlCommand)
         conn = sqlite3.connect(dataBase)
+        universalLibrary.dataBaseRegistration(dataBase)
         cursor = conn.cursor()
-        cursor.execute(command)
+        if parameters:
+            cursor.execute(sqlCommand,parameters)
+        else:
+            cursor.execute(sqlCommand)
         conn.commit()
         conn.close()
 
-    @staticmethod
-    def title(title):
-        if title is None:
-            advanced_log("warning",f"Title is none or empty.")
-            raise ValueError("Title is none or empty.")
-        elif isinstance(title, str):
-            safeTitle = "_".join(title.strip().split()).lower()
-            if safeTitle != "":
-                advanced_log("info",f"Verified. Setting title as: {safeTitle}")
-                if safeTitle in reservedKeywords:
-                    advanced_log("warning",errorMessage)
-                    raise ValueError(errorMessage)
-                return safeTitle
-            else:
-                advanced_log("warning",f"title is an empty space. Try again.")
-                raise ValueError("title is an empty space. Try again.")
-        else:
-            advanced_log("warning",f"Invalid data type.")
-            raise ValueError("Invalid data type.")
-
 class Column():
-    int = "INTEGER"
-    float = "REAL"
-    str = "TEXT"
-    bytes = "BLOB"
-    bool = "INTEGER"
-    NoneType = "NULL"
-    create = "CREATE TABLE IF NOT EXISTS"
-    mainColumn = "id INTEGER PRIMARY KEY AUTOINCREMENT"
-    tables = []
+    dataTypes ={
+    int : "INTEGER",
+    float : "REAL",
+    str : "TEXT",
+    bytes : "BLOB",
+    bool : "INTEGER",
+    type(None) : "NULL"}
 
     @staticmethod
-    def title(title):
-        if title is None:
-            advanced_log("warning",f"No title provided Returning empty string.")
-            return ""
-        elif isinstance(title, str):
-            advanced_log("info",f"Title is a string!")
-            title = title.strip().lower()
-            if title in reservedKeywords:
-                advanced_log("warning", errorMessage)
-                raise ValueError(errorMessage)
-            else:
-                return title
+    def data(columnName: str, dataType):
+        Check.none(columnName, dataType)
+        if dataType in Column.dataTypes:
+            sqlType = Column.dataTypes[dataType]
+            Check.String(columnName, sqlType)
         else:
-            advanced_log("warning",f"Invalid data type. Returning empty string.")
-            return ""
-    
+            Check.String(columnName)
+        if columnName not in universalLibrary.columnDirectory:
+            raise LookupError(f"{columnName} does not exist.")
+        return {columnName : sqlType}
+
+
     @staticmethod
-    def insert(tableName, dictionaryItems):
-        if tableName is None:
-            advanced_log("warning", "Please enter table name to insert.")
-            raise ValueError("Please enter table name to insert.")
-        elif isinstance(dictionaryItems, (list, tuple)):
-            advanced_log("info", f"Verified. Dictionary items detected. Continuing verification.")
-            token = []
-            value = []
-            for i, item in dictionaryItems:
-                if i == 0:
-                    if isinstance(item, str):
-                        advanced_log("info",f"Verified. Item is a token.")
-                        token.append(item)
-                    else:
-                        advanced_log("warning",f"Invalid data type. token should be a string.")
-                        raise ValueError("Invalid data type. token should be a string.")
-                else:
-                    if isinstance(item, str):
-                        advanced_log("info",f"Verified. Item is a doctionary value.")
-                        value.append(item)
-                    else:
-                        advanced_log("warning",f"Invalid data type. Value should be a string.")
-                        raise ValueError("Invalid data type. Value should be a string.")
+    def insert(dataBaseName: str, tableName: str, data: dict):
+        Check.none(dataBaseName, tableName, data)
+        Check.String(dataBaseName, tableName)
+        Check.Dictionary(data)
+        for columnName, sqlType in data.items():
+            name = columnName.strip().lower()
+            if name in reservedKeywords:
+                raise NameError(f"{name} is a reserved keyword.")
+            command = f"""
+                ALTER TABLE {tableName}
+                ADD COLUMN {name} {sqlType} NOT NULL;
+            """
+            Table.commit(dataBaseName, command, None)

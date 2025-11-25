@@ -1,4 +1,4 @@
-from confluent_kafka import Producer, Consumer
+from confluent_kafka import Producer, Consumer, TopicPartition
 from api_util import Check
 from log_util import advanced_log
 import json
@@ -7,6 +7,7 @@ class Library():
     def __init__(self):
         self.linkDirectory = {}
         self.producerDirectory = {}
+        self.consumerDirectory = {}
 
     def linkRegistry(self, linkName: str, link : str):
         self.linkDirectory[linkName] = link
@@ -14,7 +15,10 @@ class Library():
     def producerRegistry(self, linkName: str, producer: str):
         self.producerDirectory[linkName] = producer
 
-    def topicRegistry(self,linkName: str, topicName: str, values: dict):
+    def consumerRegistry(self, consumerName: str, consumer):
+        self.consumerDirectory[consumerName] = consumer
+
+    def send(self,linkName: str, topicName: str, values: dict):
         Check.none(linkName, topicName, values)
         Check.String(linkName, topicName)
         Check.Dictionary(values)
@@ -43,8 +47,7 @@ class Library():
                 return False
             except Exception as e:
                 raise SystemError(f"Kafka ping failed: {e}")
-
-
+            
 class kafkaProducer():
     def __init__(self) -> None:
         self.lib = Library()
@@ -76,4 +79,21 @@ class kafkaProducer():
             self.lib.producerRegistry(linkName, self.producer)
         return self
             
-                
+class kafkaConsumer():
+    def __init__(self):
+        self.lib = Library()
+
+    def create(self, linkName: str, topicName : str, consumerName: str,partition: list[int] | None = None, autoCommit: bool = False):
+        Check.none(linkName, topicName, consumerName)
+        Check.String(linkName, topicName, consumerName)
+        Check.List(partition)
+        self.server = self.lib.producerDirectory[linkName]
+        consumer = Consumer(
+            topicName,
+            self.server,
+            enable_auto_commit = autoCommit,
+            valueDeserializer = lambda info: json.loads(info.decode('utf-8')) 
+        )
+        if partition is not None:
+            consumer.assign([TopicPartition(topicName, partition)])
+        self.lib.consumerRegistry(consumerName, consumer)

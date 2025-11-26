@@ -124,7 +124,6 @@ class Column():
             raise LookupError(f"{columnName} does not exist.")
         return {columnName : sqlType}
 
-
     @staticmethod
     def insert(dataBaseName: str, tableName: str, data: dict):
         Check.none(dataBaseName, tableName, data)

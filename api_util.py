@@ -70,3 +70,11 @@ class Check():
                 advanced_log("warning",f"{arg} is not a tuple.")
                 raise ValueError(f"{arg} is not a tuple.")
         return True
+    
+    @staticmethod
+    def Callable(*args):
+        for arg in args:
+            if not callable(arg):
+                advanced_log("warning",f"{arg} is not callable.")
+                raise TypeError(f"{arg} is not callable.")
+        return True

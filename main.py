@@ -1,91 +1,34 @@
-from log_util import advanced_log
-from dictionaries.builders import Widgets, class_name, Size, Alignment, Layout
 from PyQt6.QtWidgets import QApplication
-import sys
+from dictionaries.builders import App, Widgets, Logic, universalLibrary, Size, Alignment, Layout
 
-class App():
-    def __init__(self):
-        self.pages = [Login().parentWidget()]
-        w = Widgets.stacked(self.pages[0])
-        w.setCurrentIndex(0)
-        Widgets.application(w, "App")
-    
-    def book(self, pg):
-        advanced_log("info",f"Appending {pg} to {self.pages}")
-        self.pages.append(pg)
-    
-    def page_flipper(self, x):
-        pass
-    
-class Login():
-    def __init__(self):
-        self.children = []
-        self.top_menu()
-        self.username()
-        self.password()
-        self.Buttons()
+def userDashboard(username: str):
+    Widgets.page(username)
 
-    def parentWidget(self):
-        return Widgets.page((500,300), self.children, "login")
-    
-    def top_menu(self):
-        children = []
+def loginPage():
+    Widgets.page("login")
+    def onLogin():
+        print("Login Clicked")
+    def onRegister():
+        print("Register Clicked")
+    Widgets.widget_shell("login", Layout.horizontal, Alignment.default, "title")
+    Widgets.label("title", "Login", "Login label", 40)
 
-        mode_items = ["dark", "light", "retro"]
-        mode_menu = Widgets.drop_down(mode_items, None, (Size.max, Size.default))
-        children.append(mode_menu)
-        advanced_log("debug",f"Appended {class_name(mode_menu)} to {children}")
+    Widgets.widget_shell("login", Layout.horizontal, Alignment.default, "username row")
+    Widgets.label("username row", "Username:", "username label", None)
+    Widgets.entry("username row", "username", "username input")
 
-        language_items = ["English", "Spanish"]
-        language_menu = Widgets.drop_down(language_items, None, (Size.max, Size.default))
-        children.append(language_menu)
-        advanced_log("debug",f"shell = Widgets.widget_shell(Layout.horizontal -> {class_name(Layout.horizontal)}, Alignment.top_right -> {class_name(Alignment.top_right)}, childrent -> {children})")
-        shell = Widgets.widget_shell(Layout.horizontal, Alignment.top_right, children)
-        advanced_log("debug",f" SHELL AFTER INSTANTIATION = {shell}")
+    Widgets.widget_shell("login", Layout.horizontal, Alignment.default, "password row")
+    Widgets.label("password row", "Password:", "password label", None)
+    Widgets.entry("password row", "Password", "password input", hidden=True)
 
-        self.children.append(shell)
-        return shell
-        
-    def username(self):
-        child = []
+    Widgets.widget_shell("login", Layout.horizontal, Alignment.default, "login buttons")
+    Widgets.button("login buttons", "Login", onLogin, "login button")
+    Widgets.button("login buttons", "Register", onRegister, "register")
+App.Initialize("My app")
+Widgets.stacked()
 
-        username = Widgets.label("Username:")
-        child.append(username)
-        userentry = Widgets.entry("username")
-        child.append(userentry)
+loginPage()
+Logic.findIndex("login")
 
-        shell = Widgets.widget_shell(Layout.horizontal,None, child)
-
-        self.children.append(shell)
-        return shell
-    
-    def password(self):
-        child = []
-        pw = Widgets.label("Password:")
-        child.append(pw)
-        userentry = Widgets.entry("password")
-        child.append(userentry)
-        shell = Widgets.widget_shell(Layout.horizontal, Alignment.default, child)
-        self.children.append(shell)
-        return shell
-    
-    def Buttons(self):
-        children = []
-        signinButton = Widgets.button("signin", None)
-        children.append(signinButton)
-        signupButton = Widgets.button("signup", None)
-        children.append(signupButton)
-        shell = Widgets.widget_shell(Layout.horizontal, Alignment.default, children)
-        self.children.append(shell)
-        return shell
-
-class userDashboard():
-    pass 
-if __name__ == "__main__":
-    initialize = QApplication(sys.argv)
-    advanced_log("info",f"Iinitializing App")
-    app = App()
-
-    page_connector = lambda page: page(app)
-
-    sys.exit(initialize.exec())
+Widgets.application(("stack",), "My App")
+App.run("My app")

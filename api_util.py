@@ -15,6 +15,8 @@ class Check():
     @staticmethod
     def Number(*args: int | float | None, decimal = False, exception = False):
         for arg in args:
+            if exception:
+                return None 
             if decimal == True:
                 if not isinstance(arg, (int, float)):
                     advanced_log("warning",f"Number is not a string nor a float.")
@@ -25,8 +27,6 @@ class Check():
                 if not isinstance(arg, int):
                     advanced_log("warning",f"Number is not a string nor a float.")
                     raise ValueError("Number is not a string nor a float.")
-        if exception:
-            return None
         return True
 
     @staticmethod

@@ -5,6 +5,7 @@ from PyQt6.QtWidgets import (
 )
 from PyQt6.QtWidgets import QSizePolicy
 from PyQt6.QtCore import Qt, QMargins
+from PyQt6.QtGui import QFont
 from log_util import advanced_log
 from functools import reduce
 from api_util import Check
@@ -54,19 +55,25 @@ class Library():
         else:
             raise KeyError(f"{cleanedName} already exists!")
     
-    def pageRegistry(self, pageName:str, page: QWidget):
-        Check.none(pageName, page)
-        Check.String(pageName)
-        cleanedName = cleaner(pageName)
-        if cleanedName not in self.pageDirectory:
-            self.pageDirectory[cleanedName] = page
-        else:
-            raise KeyError(f"{cleanedName} already exists!")
+    def pageRegistry(self, page: dict):
+        Check.none(page)
+        Check.Dictionary(page)
+        for pageName, pageWidget in page.items():
+            advanced_log("info",f"Adding: [stack]('{pageName}' : {class_name(pageWidget)})")
+            cleanedName = cleaner(pageName)
+            if "stack" not in self.pageDirectory:
+                advanced_log("info",f"'stack' does not exist, setting up dict [stack]")
+                self.pageDirectory["stack"] = {}
+            if cleanedName not in self.pageDirectory:
+                self.pageDirectory["stack"][cleanedName] = pageWidget
+                advanced_log("info",f"Current Page Directory: {self.pageDirectory["stack"]}")
+            else:
+                raise KeyError(f"{cleanedName} already exists!")
     
-    def lookup(self, widgetName: str, layout: bool = False, widget: bool = False):
+    def lookup(self, widgetName: str, layout: bool = False, widget: bool = False, page = False):
         Check.none(widgetName)
         Check.String(widgetName)
-        cleanedName = loweredCleaner(widgetName)
+        cleanedName = cleaner(widgetName)
         if layout and widget:
             if cleanedName in self.layoutDirectory and cleanedName in self.widgetDirectory:
                 widgetInstance = self.widgetDirectory[cleanedName]
@@ -89,6 +96,11 @@ class Library():
                 return self.widgetDirectory[cleanedName]
             else:
                 raise KeyError(f"{cleanedName} does not exist!")
+        if page:
+            if cleanedName in self.pageDirectory["stack"]:
+                return self.pageDirectory["stack"][cleanedName]
+            else:
+                raise KeyError(f"{cleanedName} does not exist!")
         
     def comboTextRegistration(self, widgetName: str, text: list | tuple):
         Check.none(widgetName, text)
@@ -107,20 +119,39 @@ universalLibrary = Library()
 
 class Logic():
     @staticmethod
-    def currentIndex(widget: QStackedWidget | QComboBox, index: int):
-        Check.none(widget)
-        Check.Number(index)
+    def findIndex(pageName: str):
+        Check.none(pageName)
+        cleanedName = cleaner(pageName)
+        pages = universalLibrary.pageDirectory["stack"]
+        advanced_log("info",f"pages = {pages}")
+        stackWidget = universalLibrary.widgetDirectory["stack"]
+        advanced_log("info",f"stackWidget = {stackWidget}")
+        pageWidget = pages[cleanedName]
+        advanced_log("info",f"pageWidget = {pageWidget}")
+        index = stackWidget.indexOf(pageWidget)
+        advanced_log("info", f"Index of {cleanedName} in stack: {index}")
+        return index
+
+    @staticmethod
+    def currentIndex(widgetName: str, pageName: str):
+        Check.none(widgetName)
+        Check.String(widgetName, pageName)
+        universalLibrary.lookup(widgetName, widget = True)
+        widget = universalLibrary.widgetDirectory[widgetName]
+        universalLibrary.lookup(pageName, page=True)
+        page = universalLibrary.pageDirectory["stack"][pageName]
+        pageIndex = widget.indexOf(page)
         if isinstance(widget, (QStackedWidget, QComboBox)):
             advanced_log("info",f"Verified, widget = {class_name(widget)}. Continuing to index verification.")
             try:
-                advanced_log("info",f"Verified, index = {class_name(index)}. Continuing to set logic.")
-                widget.setCurrentIndex(index)
+                advanced_log("info",f"Verified, index = {pageIndex}. Continuing to set logic.")
+                widget.setCurrentIndex(pageIndex)
             except IndexError:
                 advanced_log("warning",f"Index is out of bounds.")
             except Exception as e:
                 advanced_log("error",f"Error - {e}")
         else:
-            advanced_log("warning",f"Invalid data type for widget")
+            advanced_log("warning",f"Invalid data type for widget") 
             return None
 
     @staticmethod
@@ -148,15 +179,8 @@ class Logic():
                 advanced_log("info",f"Connecting activated signal to return selected index (int).")
                 widget.activated[int].connect(action)
         else:
-            advanced_log("warning",f"Wrong widget for logic. Widget is not a drop box.")
-        
-    @staticmethod
-    def activatedPages(list, pageName, action):
-        variables = [list, pageName, action]
-        for var in variables:
-            if var is None:
-                advanced_log("warning",f"{var} is None. returning None.")
-                return None
+            advanced_log("warning",f"Wrong widget for logic. Widget is not a drop box.")        
+
         
 class ObjectName():
     @staticmethod
@@ -165,43 +189,6 @@ class ObjectName():
         Check.String(objectName)
         cleanedName = cleaner(objectName)
         widget.setObjectName(cleanedName)
-
-class Children():
-    @staticmethod
-    def set(parent, child: tuple | list):
-        advanced_log("info",f"Raw Input: [parent = {class_name(parent)}] [child = {class_name(child)}]")
-        Check.none(parent, child)
-        if isinstance(child, (tuple, list)):
-            advanced_log("info", f"Multiple children detected.")
-            for c in child:
-                if not isinstance(c, (tuple(widgetType), str)):
-                    advanced_log("warning",f"Invalid data type for child. Setting default.")
-                    if isinstance(parent, QComboBox):
-                        advanced_log("info",f"Adding {class_name(c)} to {class_name(parent)}.")
-                        parent.addItem(defaultText)
-                    elif isinstance(parent, QStackedWidget):
-                        advanced_log("info",f"Adding {class_name(c)} to {class_name(parent)}.")
-                        parent.addWidget(QWidget())
-                    elif isinstance(parent, QLayout):
-                        advanced_log("info",f"Adding {class_name(c)} to {class_name(parent)}.")
-                        parent.addWidget(QWidget())
-                else:
-                    advanced_log("info",f"Verified. Adding {class_name(c)}")
-                    if isinstance(parent, QComboBox):
-                        advanced_log("info",f"Adding {class_name(c)} to {class_name(parent)}.")
-                        parent.addItem(c)
-                    elif isinstance(parent, QStackedWidget):
-                        advanced_log("info",f"Adding {class_name(c)} to {class_name(parent)}.")
-                        parent.addWidget(c)
-                    else:
-                        advanced_log("info",f"Adding {class_name(c)} to {class_name(parent)}.")
-                        parent.addWidget(c)
-        else:
-            advanced_log("info",f"Verified. Adding {class_name(child)}.")
-            if isinstance(parent, QComboBox):
-                parent.addItem(child)
-            else:
-                parent.addWidget(child)
 
 class Size():
     auto = QSizePolicy.Policy.Preferred
@@ -274,26 +261,16 @@ class Layout():
     default = QVBoxLayout
 
     @staticmethod
-    def set(widget, type):
-        advanced_log("info",f"Raw input: [widget = {class_name(widget)}] [type = {class_name(type)}]")
-        if type is None:
-            advanced_log("warning",f"Layout type needs to have a value. Setting default.")
-            widget.setLayout(Layout.default())
-            return widget.layout()        
+    def set(widget, layoutType):
+        Check.none(widget, layoutType)
+        verifiedType = layoutType()
+        if not isinstance(verifiedType, QLayout):
+            raise TypeError(f"{verifiedType} should be a QLayout!")
         try:
-            advanced_log("info",f"Before instantiating: {type} = {class_name(type)}")
-            verifiedType = type()
-            advanced_log("info",f"After instantiating: {verifiedType} = {class_name(verifiedType)}") 
-            if isinstance(verifiedType, QLayout):
-                widget.setLayout(verifiedType)
-                advanced_log("info",f"Returning: {class_name(widget.layout())}")
-                return widget.layout()
-        except:
-            type = Layout.default()
-            if isinstance(type, QLayout):
-                widget.setLayout(type)
-                advanced_log("info",f"Returning: {class_name(widget.layout())}")
-                return widget.layout()
+            widget.setLayout(verifiedType)
+        except Exception as e:
+            raise AttributeError(f"Error: {e}")
+        return widget.layout()
         
 class Margins():
     def __init__(self) -> None:
@@ -368,112 +345,173 @@ class Padding():
 class Widgets():
     @staticmethod
     def application(uiType, title: str):
-
         mainWindow = QMainWindow()
         centralWidget = QWidget()
         centralWidgetLayout = QVBoxLayout()
         mainWindow.setGeometry(100,100,400,200)
+        Size.set(centralWidget, (Size.fill, Size.fill))
         mainWindow.setCentralWidget(centralWidget)
         centralWidget.setLayout(centralWidgetLayout)
+        advanced_log("info",f"Set {class_name(mainWindow)} with a {class_name(centralWidget)}. It has a {class_name(centralWidgetLayout)} with a default geometry of (100,100,400,200)")
         universalLibrary.widgetRegistration("mainWindow", mainWindow)
+        advanced_log("info",f"Registered {class_name(mainWindow)} as mainWindow")
 
         Check.none(uiType, title)
         Check.String(title)
         cleanedTitle = cleaner(title)
         mainWindow.setWindowTitle(cleanedTitle)
         universalLibrary.widgetRegistration("centralWidget", centralWidget)
+        advanced_log("info",f"Registered {class_name(centralWidget)} as centralWidget")
         universalLibrary.layoutRegistration("centralWidget", centralWidgetLayout)
+        advanced_log("info",f"Registered {class_name(centralWidgetLayout)} as centralWidget")
 
         Check.Tuple(uiType)
-        centralWidgetLayout.addWidget(uiType)
+        for widget in uiType:
+            instance = universalLibrary.widgetDirectory[widget]
+            centralWidgetLayout.addWidget(instance)
+            advanced_log("info",f"Added {class_name(widget)} to {class_name(centralWidgetLayout)}")
         Size.set(centralWidget, (Size.fill, Size.fill))
         mainWindow.show()
         return mainWindow
      
     @staticmethod
-    def stacked(child):
-        Check.none(child)
+    def stacked():
         instance = QStackedWidget()
-        Children.set(instance, child)
+        layout = QVBoxLayout()
         universalLibrary.widgetRegistration("stack", instance)
+        advanced_log("info",f"Registered {class_name(instance)} as stack")
+        universalLibrary.layoutRegistration("stack", layout)
+        advanced_log("info",f"Registered {class_name(layout)} as stack")
         return instance
     
     @staticmethod
-    def page(parentWidgetName:str, size: list | tuple, pageName: str):
-        Check.none(parentWidgetName, size, pageName)
-        for n in size:
-            Check.Number(n, decimal=True)
+    def page(pageName: str):
+        Check.none(pageName)
         cleanedName = cleaner(pageName)
         instance = QWidget()
         layout = QVBoxLayout()
         instance.setLayout(layout)
-        universalLibrary.pageRegistry(pageName, instance)
-        universalLibrary.layoutRegistration(pageName, layout)
-        Size.set(instance, size)
         instance.setObjectName(cleanedName)
-        parentFound = universalLibrary.layoutDirectory[parentWidgetName]
-        parentFound.addWidget(instance)
+        Size.set(instance, (Size.fill, Size.fill))
+        stackedWidget = universalLibrary.widgetDirectory["stack"]
+        stackedWidget.addWidget(instance)
+        advanced_log("info",f"Added {pageName} to {class_name(stackedWidget)}")
+        universalLibrary.pageRegistry({pageName:instance})
+        advanced_log("info",f"Registered Page as {pageName}")
+        universalLibrary.layoutRegistration(pageName, layout)
+        advanced_log("info",f"Registered Layout as {pageName}")
         return instance
     
     @staticmethod
-    def drop_down(parentWidgetName:str, text:list | tuple, logic, size: list | tuple, widgetName: str):
-        Check.none(parentWidgetName, text, widgetName)
+    def drop_down(parentName:str, text:list | tuple, logic, size: list | tuple, widgetName: str):
+        Check.none(parentName, text, widgetName)
         Check.String(widgetName)
         cleanedName = loweredCleaner(widgetName)
         instance = QComboBox()
         if logic:
             pass
         instance.addItems(text)
-        universalLibrary.widgetRegistration(cleanedName, instance)
-        universalLibrary.comboTextRegistration(cleanedName, text)
         Size.set(instance, size)        
-        parentFound = universalLibrary.layoutDirectory[parentWidgetName]
-        parentFound.addWidget(instance)
+        parentLayout = universalLibrary.layoutDirectory[parentName]
+        parentLayout.addWidget(instance)
+        advanced_log("info",f"Added {widgetName} to {parentName} with the items: {text}")
+        universalLibrary.widgetRegistration(widgetName, instance)
+        advanced_log("info",f"Registered {class_name(instance)} as {widgetName}")
+        universalLibrary.comboTextRegistration(cleanedName, text)
+        advanced_log("info",f"Registered items: {text}")
         return instance
     
     @staticmethod
-    def widget_shell(parentWidgetName, layout, alignment, widgetName: str):
-        Check.none(parentWidgetName, layout, alignment, widgetName)
+    def widget_shell(parentName, layout, alignment, widgetName: str):
+        Check.none(parentName, layout, alignment, widgetName)
         Check.String(widgetName)
-        shell = QWidget()
-        verifiedLayout = Layout.set(shell, layout) 
+        instance = QWidget()
+        verifiedLayout = Layout.set(instance, layout) 
         if alignment: 
             Alignment.set(verifiedLayout, alignment)
-        shell.setObjectName(widgetName)
-        universalLibrary.widgetRegistration(widgetName, shell)
+        instance.setObjectName(widgetName)
+        parentLayout = universalLibrary.layoutDirectory[parentName]
+        parentLayout.addWidget(instance)
+        advanced_log("info",f"Added {widgetName} to {parentName}")
+        universalLibrary.widgetRegistration(widgetName, instance)
         universalLibrary.layoutRegistration(widgetName, verifiedLayout)
-        parentFound = universalLibrary.layoutDirectory[parentWidgetName]
-        parentFound.addWidget(shell)
-        return shell
+        advanced_log("info",f"Registered {class_name(instance)} as {widgetName}")
+        return instance
         
     @staticmethod
-    def label(parentLayout, text:str):
-        Check.none(parentLayout, text)
-        Check.String(text)
+    def label(parentName:str, text:str, widgetName:str, size: int | None):
+        Check.none(parentName, text, widgetName)
+        Check.String(parentName, text, widgetName)
+        Check.Number(size, exception=True)
         cleanedText = cleaner(text)
         instance = QLabel()
         instance.setText(cleanedText)
+        font = QFont()
+        if size:
+            font.setPointSize(size)
+        instance.setFont(font)
+        universalLibrary.lookup(parentName, layout=True)
+        parentLayout = universalLibrary.layoutDirectory[parentName]
         parentLayout.addWidget(instance)
+        advanced_log("info",f"Added {widgetName} to {parentName} with the text: {cleanedText}")
+        universalLibrary.widgetRegistration(widgetName, instance)
+        advanced_log("info",f"Registered {class_name(instance)} as {widgetName}")
         return instance
         
     @staticmethod
-    def entry(parentLayout, placeHolder: str):
-        Check.none(parentLayout, placeHolder)
-        Check.String(placeHolder)
+    def entry(parentName:str, placeHolder: str, widgetName:str, hidden = False):
+        Check.none(parentName, placeHolder, widgetName)
+        Check.String(parentName,placeHolder, widgetName)
         instance = QLineEdit()
         cleanedPlaceHolder = cleaner(placeHolder)
         instance.setPlaceholderText(cleanedPlaceHolder)
+        if hidden:
+            instance.setEchoMode(QLineEdit.EchoMode.Password)
+        universalLibrary.lookup(parentName, layout=True)
+        parentLayout = universalLibrary.layoutDirectory[parentName]
         parentLayout.addWidget(instance)
+        advanced_log("info",f"Added {widgetName} to {parentName} with the placeholder: {cleanedPlaceHolder}")
+        universalLibrary.widgetRegistration(widgetName, instance)
+        advanced_log("info",f"Registered {class_name(instance)} as {widgetName}")
         return instance
     
     @staticmethod
-    def button(parentLayout, text: str, logic):
-        Check.none(parentLayout, text)
-        Check.Callable(logic)
-        Check.String(text)
+    def button(parentName, text: str, logic, widgetName:str, dummy = False):
+        Check.none(parentName, text, widgetName)
+        if not dummy:
+            Check.Callable(logic)
+        Check.String(text, widgetName)
         instance = QPushButton()
         cleanedText = cleaner(text)
         instance.setText(cleanedText)
+        universalLibrary.lookup(parentName, layout=True)
+        parentLayout = universalLibrary.layoutDirectory[parentName]
         parentLayout.addWidget(instance)
-        instance.clicked.connect(logic)
+        if not dummy:
+            instance.clicked.connect(logic)
+        advanced_log("info",f"Added {widgetName} to {parentName} with the Text: {cleanedText}")
+        universalLibrary.widgetRegistration(widgetName, instance)
+        advanced_log("info",f"Registered {class_name(instance)} as {widgetName}")
         return instance
+    
+class App():
+    @staticmethod
+    def Initialize(appName:str):
+        Check.none(appName)
+        Check.String(appName)
+        cleanedName = cleaner(appName)
+        app = QApplication(sys.argv)
+        advanced_log("info",f"Initializing: {class_name(app)}")
+        universalLibrary.widgetRegistration(cleanedName, app)
+        advanced_log("info",f"Registered: {class_name(app)} as {cleanedName}")
+        return app
+    
+    @staticmethod
+    def run(appName):
+        Check.none(appName)
+        universalLibrary.lookup(appName,widget=True)
+        app = universalLibrary.widgetDirectory[appName]
+        if not isinstance(app, QApplication):
+            raise ValueError(f"{app} is not a QApplication!")
+        advanced_log("info",f"Running application.")
+        sys.exit(app.exec())

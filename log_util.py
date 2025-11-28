@@ -13,7 +13,6 @@ log.basicConfig(
         log.StreamHandler()
     ]
 )
-
 def advanced_log(log_type, text):
     caller_frame = inspect.currentframe()
     if caller_frame is None or caller_frame.f_back is None:
@@ -55,4 +54,3 @@ def advanced_log(log_type, text):
 
 # You'll need to update the rest of your log_util.py file with this new function.
 advanced_log("info", "TEST LOG FROM log_util.py")
-

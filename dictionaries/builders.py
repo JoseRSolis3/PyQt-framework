@@ -133,11 +133,10 @@ class Logic():
         return index
 
     @staticmethod
-    def currentIndex(widgetName: str, pageName: str):
-        Check.none(widgetName)
-        Check.String(widgetName, pageName)
-        universalLibrary.lookup(widgetName, widget = True)
-        widget = universalLibrary.widgetDirectory[widgetName]
+    def currentIndex(pageName: str):
+        Check.none(pageName)
+        Check.String(pageName)
+        widget = universalLibrary.widgetDirectory["stack"]
         universalLibrary.lookup(pageName, page=True)
         page = universalLibrary.pageDirectory["stack"][pageName]
         pageIndex = widget.indexOf(page)
@@ -180,16 +179,7 @@ class Logic():
                 widget.activated[int].connect(action)
         else:
             advanced_log("warning",f"Wrong widget for logic. Widget is not a drop box.")        
-
         
-class ObjectName():
-    @staticmethod
-    def set(widget, objectName):
-        Check.none(widget, objectName)
-        Check.String(objectName)
-        cleanedName = cleaner(objectName)
-        widget.setObjectName(cleanedName)
-
 class Size():
     auto = QSizePolicy.Policy.Preferred
     fill = QSizePolicy.Policy.Expanding
@@ -348,7 +338,7 @@ class Widgets():
         mainWindow = QMainWindow()
         centralWidget = QWidget()
         centralWidgetLayout = QVBoxLayout()
-        mainWindow.setGeometry(100,100,400,200)
+        mainWindow.setGeometry(100,100,500,300)
         Size.set(centralWidget, (Size.fill, Size.fill))
         mainWindow.setCentralWidget(centralWidget)
         centralWidget.setLayout(centralWidgetLayout)

@@ -14,10 +14,29 @@ import sys
 import os
 
 defaultText = "Enter Text Here"
-def cleaner(text: str) -> str:
-    return text.strip()
-def loweredCleaner(text:str)->str:
-    return text.strip().lower()
+
+class Text():
+    @staticmethod
+    def strip(*text: str) -> list[str]:
+        Check.none(text)
+        return [t.strip() for t in text]
+
+    @staticmethod
+    def lowerCase(*text:str) -> list[str]:
+        Check.none(text)
+        return [t.lower() for t in text]
+
+    @staticmethod
+    def lowerCasedStrip(*text:str) -> list[str]:
+        Check.none(text)
+        return [t.strip().lower() for t in text]
+    
+    @staticmethod
+    def upperCase(*text:str)-> list[str]:
+        Check.none(text)
+        return [t.upper() for t in text]
+    
+
 
 class_name = lambda var: var.__class__.__name__
 layout_setter = lambda w, l: w.setLayout(l)

@@ -5,9 +5,11 @@ class_name = lambda var: var.__class__.__name__
 
 class Check():
     @staticmethod
-    def none(*args):
+    def none(*args, exception = False):
         for arg in args:
             if arg is None:
+                if exception:
+                    return None
                 advanced_log("warning",f"{arg} is None.")
                 raise ValueError(f"Error: {arg} is None.")
         return True

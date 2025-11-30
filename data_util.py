@@ -1,8 +1,9 @@
 import sqlite3
 from log_util import advanced_log
-from dictionaries.builders import class_name, cleaner, loweredCleaner
+from dictionaries.builders import class_name, Text
 from api_util import Check
 import os
+from typing import TypedDict
 
 
 # TODO: Validate column syntax (ensure each entry contains a name and type)
@@ -31,29 +32,15 @@ reservedKeywords = set([
     "delete", "alter", "update"
 ])
 
-class Library():
-    def __init__(self) -> None:
-        self.dataBaseDirectory = {}
-        self.tableDirectory = {}
-        self.columnDirectory = {}
+class dataDict(TypedDict):
+    folderName : str
+    fileName : str
+    tableName : str
+    command : str
 
-    def startsWith(self, itemName:str, search:str):
-        cleanedItem = loweredCleaner(itemName)
-        cleanedName = loweredCleaner(search)
-        return cleanedItem.startswith(cleanedName)
-        
-    def tableRegistration(self, tableName: str, value: str):
-        if tableName in self.tableDirectory:
-            return False
-        self.tableDirectory[tableName] = value
-        return True
-    
-    def columnRegistration(self, columnName:str, values: dict):
-        if columnName in self.columnDirectory:
-            return False
-        self.columnDirectory[columnName] = values
-        return True
-    
+class Library():
+    dataBaseDirectory = {}
+
     def dataBaseRegistration(self, dataBaseName: str | dict, connection):
         if isinstance(dataBaseName, dict):
             for folder, file in dataBaseName.items():
@@ -64,159 +51,148 @@ class Library():
             self.dataBaseDirectory[dataBaseName] = connection
         return True
     
-    def search(self, startsWith: str, dataBase = False, tables = False, columns = False):
-        Check.none(startsWith)
-        Check.String(startsWith)
-        if dataBase:
-            directory = self.dataBaseDirectory
-        elif tables:
-            directory = self.tableDirectory
-        elif columns:
-            directory = self.columnDirectory
+    def tableRegistration(self, location: dict[str, dict[str, str]], table, connection):
+        if isinstance(location, dict):
+            for folder, file in location.items():
+                if folder not in self.dataBaseDirectory:
+                    Library.dataBaseRegistration(self, {folder:file}, connection)
+                if isinstance(file, dict):
+                    for dataBase, data in file.items():
+                        self.dataBaseDirectory[folder][dataBase][connection] = data
+                else:
+                    raise TypeError(f"Invalid data type. Expected type: dict. Given type: {class_name(file)}")
         else:
-            directory = self.tableDirectory
+            raise TypeError(f"Invalid data type. Expected type: dict. Given type: {class_name(location)}")
 
-        return {
-            name: directory[name]
-            for name in directory
-            if name.startswith(startsWith)
-       }
+dataBase = Library()
 
-dataLibrary = Library()
+class Table:
+    def __init__(self, db: "DataBase", tableName: str):
+        self.db = db  
+        self.name = Text.lowerCasedStrip(tableName)[0]  
+
+    def insert(self, dataValues: dict[str, str]):
+        self.db.dataInsert(self.name, dataValues)
+
 
 class DataBase():
-    @staticmethod
-    def create(folderName:str, dataBaseName: str, folder = False):
-        Check.none(dataBaseName)
-        Check.String(dataBaseName, folderName)
-        cleanedFolder = loweredCleaner(folderName)
-        cleanedFile = loweredCleaner(dataBaseName)
+    def __init__(self, folderName:str, fileName:str, customFolder) -> None:
+        Check.none(folderName, fileName, exception=True)
+        Check.String(folderName, fileName, exception=True)
+        self.folder,self.file = Text.lowerCasedStrip(folderName, fileName)
+        self.tables = []
+        self.columns = {}
+        self.dataTypes = ["INTEGER", "REAL", "TEXT", "BLOB", "NULL"]
 
-        if not cleanedFile.endswith(".db"):
-            advanced_log("info",f"{cleanedFile} is missing '.db'. Adding it to name.")
-            cleanedFile += ".db"
+    def table(self, tableName: str) -> Table:
+            return Table(self, tableName)
 
-        if folder == True:
-            directory = os.path.join(cleanedFolder, cleanedFile)
-            folderLocation = os.path.dirname(directory)
+    def checkDataType(self, dataType:str)->str:
+        Check.none(dataType)
+        Check.String(dataType)
+        upperCased = Text.upperCase(dataType)
+        if upperCased in self.dataTypes:
+            return upperCased
         else:
-            folderLocation = os.path.dirname(os.path.join("data",cleanedFile))
+            raise LookupError(f"{upperCased} is not a SQLite data type.")
 
-        if folderLocation and not os.path.exists(folderLocation):
-            advanced_log("info",f"{folderLocation} does not exist. Creating {folderLocation} location.")
-            os.makedirs(folderLocation)
-        path = os.path.join(folderLocation, cleanedFile)
+    def create(self):
+        if not self.file.endswith(".db"):
+            self.file += ".db"
+        customFolder = self.folder
+        default = "data"
+
+        if os.path.exists(customFolder):
+            base = customFolder
+        elif os.path.exists(default):
+            base = default
+        else:
+            base = customFolder
+        
+        folderLocation = base   
+        i = 0
+        while os.path.exists(folderLocation):
+            i+=1
+            folderLocation = f"{base}{i}"
+        os.makedirs(folderLocation, exist_ok=True)
+        path = os.path.join(folderLocation, self.file)
         conn = sqlite3.connect(path)
-        registered = dataLibrary.dataBaseRegistration({folderLocation:cleanedFile}, conn)
+        registered = dataBase.dataBaseRegistration({folderLocation:self.file}, conn)
+        self.folder = folderLocation
         return conn if registered else None
-    
-class Table():
-    @staticmethod
-    def create(dataBaseName: str, tableName: str):
-        advanced_log("debug",f"RAW DATA | data base: {dataBaseName}. table: {tableName}")
-        Check.none(dataBaseName, tableName)
-        Check.String(dataBaseName, tableName)
-        if tableName in reservedKeywords:
+
+    def createTable(self,tableName:str):
+        cleanedTable = Text.strip(tableName)
+        if cleanedTable in reservedKeywords:
             raise NameError(f"{tableName} is a reserved keyword")
-        tableName = tableName.strip().lower()
         command = f"""
-            CREATE TABLE IF NOT EXISTS {tableName}(
+            CREATE TABLE IF NOT EXISTS {cleanedTable}(
             id INTEGER PRIMARY KEY AUTOINCREMENT
             );
         """
-        advanced_log("info",f"{command}")
-        dataLibrary.tableRegistration(tableName, command)
-        Table.commit(dataBaseName, command, None)
+        print(command)
+        connection = dataBase.dataBaseDirectory[self.folder][self.file]
+        dataBase.dataBaseRegistration({self.folder: {self.file: cleanedTable}}, connection)
+        self.tables.append(cleanedTable)
+        self.commit(command)
+    
+    def createColumn(self, tableName:str, columnName:str, dataType:str):
+        Check.none(tableName, columnName, dataType)
+        Check.String(tableName, columnName, dataType)
+        lowerCasedTitle, lowerCasedColumn = Text.lowerCase(tableName, columnName)
+        if columnName in reservedKeywords:
+            raise NameError(f"{columnName} is a reserved keyword!")
+        if not lowerCasedTitle in self.tables:
+            raise ValueError(f"{lowerCasedTitle} does not exist!")
+        verifiedData = self.checkDataType(dataType)
+        command = f"""
+            ALTER TABLE {lowerCasedTitle}
+            ADD COLUMN {lowerCasedColumn} {verifiedData} NOT NULL;
+        """
+        self.columns.setdefault(lowerCasedTitle, []).append(lowerCasedColumn)
+        self.commit(command)
+    
+    def dataInsert(self, tableName:str, dataValues:dict[str,str]):
+        separatedColumnList = []
+        separatedValues = []
+        for column in dataValues.keys():
+            Check.none(column)
+            Check.String(column)
+            lowerCasedColumn = Text.lowerCase(column)
+            separatedColumnList.append(lowerCasedColumn)
+        for value in dataValues.values():
+            Check.none(value)
+            try:
+                numberCheck = int(value)
+            except:
+                try:
+                    numberCheck = float(value)
+                except:
+                    numberCheck = Text.lowerCase(value)
+            separatedValues.append(numberCheck)
+            
+        Check.none(tableName)
+        Check.String(tableName)
+        lowerCasedTitle= Text.lowerCase(tableName)
+        for column in separatedColumnList:
+            if not column in self.columns[lowerCasedTitle]:
+                raise ValueError(f"{column} does not exist!")
+        columns = ", ".join(separatedColumnList)
+        placeHolders = ", ".join(["?"] * len(separatedValues))
+        values = tuple(separatedValues)
+        command = f"""
+            INSERT INTO {lowerCasedTitle}
+            ({columns}) VALUES ({placeHolders})
+        """
+        self.commit(command, values)
 
-    @staticmethod
-    def delete(dataBaseName: str, tableName: str):
-        Check.none(dataBaseName, tableName, )
-        Check.String(dataBaseName, tableName)
-        if tableName in dataLibrary.tableDirectory:
-            sqlCommand = f"DROP TABLE {tableName}"
-            Table.commit(dataBaseName, sqlCommand, None)
 
-    @staticmethod
-    def commit(dataBase: str, sqlCommand: str, parameters: tuple | dict | None = None):
-        Check.none(dataBase, sqlCommand)
-        Check.String(dataBase, sqlCommand)
-        cleanedDataBase = loweredCleaner(dataBase)
-        conn: sqlite3.Connection | None = None
-        for folder,files in dataLibrary.dataBaseDirectory.items():
-            if cleanedDataBase in files:
-                advanced_log("debug",f"Database exists in Directory. Getting.")
-                conn = dataLibrary.dataBaseDirectory[folder][cleanedDataBase]
-                break
-        if conn == None:
-            conn = DataBase.create("", cleanedDataBase)
-            dataLibrary.dataBaseRegistration(cleanedDataBase, conn)
-        assert conn is not None
-        advanced_log("info",f"Connected to Data Base.")
-        cursor = conn.cursor()
-        if parameters:
-            cursor.execute(sqlCommand,parameters)
-        else:
-            cursor.execute(sqlCommand)
-        advanced_log("info",f"Commiting: {sqlCommand} with parameters: {parameters} to {dataBase}")
-        conn.commit()
+    def commit(self, sqlCommand, parameters: tuple | dict | None = None):
+            conn = dataBase.dataBaseDirectory[self.folder][self.file]
+            cursor = conn.cursor()
+            if parameters:
+                cursor.execute(sqlCommand, parameters)
+            else:
+                cursor.execute(sqlCommand)
+            conn.commit()
 
-class Column():
-    integer = "INTEGER"
-    real = "REAL"
-    text = "TEXT"
-    blob = "BLOB"
-    switch = "INTEGER"
-    null = "NULL"
-
-    dataTypes = [integer, real, text, blob, switch, null]
-
-    @staticmethod
-    def data(columnName: str, dataType):
-        Check.none(columnName, dataType)
-        if dataType in Column.dataTypes:
-            Check.String(columnName, dataType)
-        else:
-            Check.String(columnName)
-        if columnName not in dataLibrary.columnDirectory:
-            raise LookupError(f"{columnName} does not exist.")
-        return {columnName : dataType}
-
-    @staticmethod
-    def insert(dataBaseName: str, tableName: str, data: dict):
-        Check.none(dataBaseName, tableName, data)
-        Check.String(dataBaseName, tableName)
-        Check.Dictionary(data)
-        for columnName, sqlType in data.items():
-            name = columnName.strip().lower()
-            if name in reservedKeywords:
-                raise NameError(f"{name} is a reserved keyword.")
-            command = f"""
-                ALTER TABLE {tableName}
-                ADD COLUMN {name} {sqlType} NOT NULL;
-            """
-            Table.commit(dataBaseName, command, None)
-
-class Data():
-    @staticmethod
-    def insert(dataBaseName: str, tableName:str, data:dict):
-        Check.none(dataBaseName, tableName, data)
-        Check.String(dataBaseName, tableName)
-        Check.Dictionary(data)
-        columns = ", ".join(data.keys())
-        placeholders = ", ".join(["?"] * len(data))
-        values = tuple(data.values())
-        sqlCommand = f"INSERT INTO {tableName} ({columns}) VALUES ({placeholders})"
-        Table.commit(dataBaseName, sqlCommand, values)
-
-# Create database
-DataBase.create("data", "database1", folder=True)
-
-# Create table
-Table.create("database1.db", "table1")
-
-# Add columns
-Column.insert("database1.db", "table1", {"name": Column.text, "age": Column.integer})
-
-# Insert data
-Data.insert("database1.db", "table1", {"name": "Alice", "age": 30})
-Data.insert("database1.db", "table1", {"name": "Bob", "age": 25})

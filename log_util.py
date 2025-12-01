@@ -2,6 +2,11 @@ import logging as log
 import inspect
 import os
 
+warning = "warning"
+debug = "debug"
+info = "info"
+error = "error"
+
 file_name = os.path.basename(__file__)
 
 log.basicConfig(

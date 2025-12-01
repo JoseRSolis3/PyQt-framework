@@ -6,11 +6,6 @@ import os
 from typing import TypedDict
 
 
-# TODO: Validate column syntax (ensure each entry contains a name and type)
-# TODO: Allow dynamic table alterations (add new columns if table already exists)
-# TODO: Add type checking for db_name and table_name inputs
-# TODO: Support passing columns as a dict {name: type} in addition to list/tuple
-# TODO: Detect and prevent SQL injection via unsafe table/column names
 # TODO: Provide an option to skip auto-creation (manual mode)
 # TODO: Add logging for table creation status (created vs already existed)
 # TODO: Enable wrapper to return cursor or connection if user needs deeper DB operations
@@ -22,7 +17,6 @@ from typing import TypedDict
 # TODO: Add support for foreign keys and constraints in column definitions
 # TODO: Add caching so the same table isn't re-validated on every call
 # TODO: Add async version in the future when framework grows
-# TODO: Possibly support multiple tables per decorator call
 
 default_text = "Enter Text Here"
 errorMessage = f"User entered reserved keywords for title. Please rename."
@@ -82,6 +76,7 @@ class DataBase():
         self.folder,self.file = Text.lowerCasedStrip(folderName, fileName)
         self.tables = []
         self.columns = {}
+        self.secureData = {}
         self.dataTypes = ["INTEGER", "REAL", "TEXT", "BLOB", "NULL"]
 
     def table(self, tableName: str) -> Table:
@@ -121,7 +116,7 @@ class DataBase():
         self.folder = folderLocation
         return conn if registered else None
 
-    def createTable(self,tableName:str):
+    def createTable(self,tableName:str, secure= False):
         cleanedTable = Text.strip(tableName)
         if cleanedTable in reservedKeywords:
             raise NameError(f"{tableName} is a reserved keyword")
@@ -133,6 +128,7 @@ class DataBase():
         print(command)
         connection = dataBase.dataBaseDirectory[self.folder][self.file]
         dataBase.dataBaseRegistration({self.folder: {self.file: cleanedTable}}, connection)
+        self.secureData.setdefault(self.file, []).append([cleanedTable, []])
         self.tables.append(cleanedTable)
         self.commit(command)
     
@@ -150,6 +146,7 @@ class DataBase():
             ADD COLUMN {lowerCasedColumn} {verifiedData} NOT NULL;
         """
         self.columns.setdefault(lowerCasedTitle, []).append(lowerCasedColumn)
+        self.secureData.setdefault(self.file, {}).setdefault(lowerCasedTitle, []).append(lowerCasedColumn)
         self.commit(command)
     
     def dataInsert(self, tableName:str, dataValues:dict[str,str]):
@@ -185,6 +182,16 @@ class DataBase():
             ({columns}) VALUES ({placeHolders})
         """
         self.commit(command, values)
+
+    def delete(self, tableName:str):
+        Check.none(tableName)
+        Check.String(tableName)
+        lowerCased = Text.lowerCase(tableName)
+        if lowerCased in self.tables:
+            command = f"""
+                DROP TABLE {lowerCased}
+            """
+            self.commit(command)
 
 
     def commit(self, sqlCommand, parameters: tuple | dict | None = None):

@@ -1,7 +1,4 @@
-from dictionaries.builders import cleaner
+items = (123,123,123)
 
-text1 = "       aasdfJKHUHNK"
-text2 = "This Is A messGe"
-cleaned = cleaner(text1)
-
-print(cleaned)
+tupledItems = tuple(items)
+print(tupledItems)

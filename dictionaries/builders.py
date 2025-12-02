@@ -47,41 +47,6 @@ widgetType = [
 
 class Logic():
     @staticmethod
-    def findIndex(pageName: str):
-        Check.none(pageName)
-        cleanedName = cleaner(pageName)
-        pages = universalLibrary.pageDirectory["stack"]
-        advanced_log("info",f"pages = {pages}")
-        stackWidget = universalLibrary.widgetDirectory["stack"]
-        advanced_log("info",f"stackWidget = {stackWidget}")
-        pageWidget = pages[cleanedName]
-        advanced_log("info",f"pageWidget = {pageWidget}")
-        index = stackWidget.indexOf(pageWidget)
-        advanced_log("info", f"Index of {cleanedName} in stack: {index}")
-        return index
-
-    @staticmethod
-    def currentIndex(pageName: str):
-        Check.none(pageName)
-        Check.String(pageName)
-        widget = universalLibrary.widgetDirectory["stack"]
-        universalLibrary.lookup(pageName, page=True)
-        page = universalLibrary.pageDirectory["stack"][pageName]
-        pageIndex = widget.indexOf(page)
-        if isinstance(widget, (QStackedWidget, QComboBox)):
-            advanced_log("info",f"Verified, widget = {class_name(widget)}. Continuing to index verification.")
-            try:
-                advanced_log("info",f"Verified, index = {pageIndex}. Continuing to set logic.")
-                widget.setCurrentIndex(pageIndex)
-            except IndexError:
-                advanced_log("warning",f"Index is out of bounds.")
-            except Exception as e:
-                advanced_log("error",f"Error - {e}")
-        else:
-            advanced_log("warning",f"Invalid data type for widget") 
-            return None
-
-    @staticmethod
     def clicked(widget: QPushButton, action):
         if action is None:
             advanced_log("warning",f"Action is None. Returning None")
@@ -303,24 +268,29 @@ class App():
         advanced_log(info, f"Adding page into stacked widget list.")
         self.stacked.addWidget(self.pageWidget)
         advanced_log(info, f"Setting current page to first page.")
+        self.index = self.stacked.indexOf(self.pageWidget)
         self.stacked.setCurrentIndex(0)
         self.pageDirectory[cleanedName] = {
             "instance" : self.pageWidget,
             "layout" : self.pageLayout,
+            "index" : self.index,
             "pageChildren" : {}
         }
         self.currentPage = cleanedName
         advanced_log(info, f"Creating page: {cleanedName} for {self.appName}")
         return self.pageWidget
 
-    def widgetShell(self, widgetName: str | None, layout, alignment: None = None):
+    def widgetShell(self, widgetName: str, layout, size: tuple[int,int] | None = None,  alignment= None, fixedSize = False):
         self.pageInfo = self.pageDirectory[self.currentPage] # pageDirectory[curentPage](options: [1. Widget], [2. Layouts], [Children])
         pageLayout = self.pageInfo["layout"] # Parent Layout
         instance = QWidget()
-        if layout:
-            verifiedLayout = Layout.set(instance, layout) 
+        Check.none(layout)
+        verifiedLayout = Layout.set(instance, layout) 
         if alignment: 
             Alignment.set(verifiedLayout, alignment)
+        if fixedSize and size:
+            Size.set(instance, (Size.fixed, Size.fixed))
+            instance.resize(*size)
         instance.setObjectName(widgetName)
         pageLayout.addWidget(instance)
         self.pageInfo["pageChildren"][widgetName]= {

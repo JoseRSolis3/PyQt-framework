@@ -4,7 +4,7 @@ from dictionaries.builders import App, Logic, Size, Alignment, Layout
 
 app = App("my application")
 page = app.page("Login")
-loginShell = app.widgetShell("LoginTitle", layout=Layout.vertical)
+loginShell = app.widgetShell("LoginTitle", layout=Layout.vertical, size= (500,300))
 loginTitle = app.label("LoginTitle", "titleLabel", "Login", 35)
 loginTitle2 = app.label("LoginTitle", "title2", "second title", 20)
 dropdown1 = app.drop_down("LoginTitle", ("English", "Spanish"), None, "languages")

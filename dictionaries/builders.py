@@ -240,7 +240,7 @@ class App():
     def run(self):
         advanced_log(info, f"Executing Application.")
         sys.exit(self.app.exec())
-
+    
     def window(self):
         advanced_log(info, f"Creating Main Window.")
         self.mainWindow = QMainWindow()
@@ -257,7 +257,7 @@ class App():
         self.mainWindow.show()
         return self.mainWindow
 
-    def page(self, pageName: str):
+    def page(self, pageName: str, pageSize: tuple[int,int] | None = None, fixedSize = False):
         Check.none(pageName)
         cleanedName = Text.lowerCasedStrip(pageName)[0]
         self.pageWidget = QWidget()
@@ -268,6 +268,10 @@ class App():
         advanced_log(info, f"Adding page into stacked widget list.")
         self.stacked.addWidget(self.pageWidget)
         advanced_log(info, f"Setting current page to first page.")
+        if pageSize and fixedSize:
+            Size.set(self.pageWidget, (Size.fixed, Size.fixed))
+            advanced_log(info, f"Setting page size to {pageSize}")
+            self.pageWidget.setFixedSize(pageSize[0], pageSize[1])
         self.index = self.stacked.indexOf(self.pageWidget)
         self.stacked.setCurrentIndex(0)
         self.pageDirectory[cleanedName] = {
@@ -290,16 +294,35 @@ class App():
             Alignment.set(verifiedLayout, alignment)
         if fixedSize and size:
             Size.set(instance, (Size.fixed, Size.fixed))
-            instance.resize(*size)
+            advanced_log(info, f"Size detected, setting as {size}")
+            instance.setFixedSize(size[0], size[1])
         instance.setObjectName(widgetName)
         pageLayout.addWidget(instance)
         self.pageInfo["pageChildren"][widgetName]= {
             "shellInstance" : instance,
             "shellLayout" : verifiedLayout,
+            "shellName" : widgetName,
             "shellChildren" : {}
         }
         advanced_log(info, f"Creating widgetShell for {self.pageInfo}")
         return instance
+    
+    def formItems(self, formName:str, layout,size: tuple[int,int] | None = None,  alignment= None, fixedSize = False ):
+        self.shellInfo = self.pageInfo["pageChildren"][formName]
+        formLayout = self.shellInfo["shellLayout"]
+        instance = QWidget()
+        Check.none(layout)
+        verifiedLayout = Layout.set(instance, layout)
+        if alignment: 
+            Alignment.set(verifiedLayout, alignment)
+        if fixedSize and size:
+            Size.set(instance, (Size.fixed, Size.fixed))
+            advanced_log(info, f"Size detected, setting as {size}")
+            instance.setFixedSize(size[0], size[1])
+        formLayout.addItem(instance)
+        self.shellInfo["shellChildren"] ={
+            "children" : instance,
+        }
     
     def label(self,shellName:str , widgetName:str, text:str, size: int | None):
         currentShell = self.pageInfo["pageChildren"][shellName]
